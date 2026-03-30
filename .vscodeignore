@@ -1,0 +1,14 @@
+src/**
+tests/**
+node_modules/**
+dist/**/*.map
+esbuild.mjs
+tsconfig.json
+pnpm-lock.yaml
+vitest.config.ts
+CLAUDE.md
+.github/**
+.husky/**
+.vscode/**
+.git
+.gitignore
