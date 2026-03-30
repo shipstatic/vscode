@@ -8,11 +8,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/shipstatic/ship-vscode.git"
+    "url": "https://github.com/shipstatic/vscode.git"
   },
   "homepage": "https://shipstatic.com",
   "bugs": {
-    "url": "https://github.com/shipstatic/ship-vscode/issues"
+    "url": "https://github.com/shipstatic/vscode/issues"
   },
   "engines": {
     "vscode": "^1.99.0"
