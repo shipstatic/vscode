@@ -2,7 +2,7 @@
   "name": "shipstatic",
   "displayName": "ShipStatic",
   "description": "Free, no account needed — deploy static websites, landing pages, and prototypes instantly from chat or the command palette",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "publisher": "shipstatic",
   "icon": "icon.png",
   "license": "MIT",
