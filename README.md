@@ -1,6 +1,6 @@
 # ShipStatic for VS Code
 
-Deploy static sites instantly — ask your AI assistant or use the command palette. Free, no account needed.
+Deploy static websites, landing pages, and prototypes instantly — ask your AI assistant or use the command palette. Free, no account needed.
 
 [ShipStatic](https://shipstatic.com) is static hosting without the complexity. No build steps, no framework lock-in — upload your files and get a live URL.
 
@@ -30,7 +30,7 @@ A **deploy button** in the status bar provides one-click deployments.
 1. Install the extension
 2. Open the chat and ask to deploy your project
 
-That's it. Your site is live immediately.
+That's it. Your site is live instantly.
 
 ### API Key (optional)
 
