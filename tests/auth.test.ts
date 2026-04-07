@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { window, createMockContext } from './vscode.mock';
-import { getApiKey, setApiKey, ensureApiKey } from '../src/auth';
+import { getApiKey, setApiKey } from '../src/auth';
 
 describe('auth', () => {
   let ctx: ReturnType<typeof createMockContext>;
@@ -49,26 +49,6 @@ describe('auth', () => {
       expect(opts.ignoreFocusOut).toBe(true);
       expect(opts.validateInput('ship-valid')).toBeNull();
       expect(opts.validateInput('bad')).toContain('ship-');
-    });
-  });
-
-  describe('ensureApiKey', () => {
-    it('returns existing key without prompting', async () => {
-      await ctx.secrets.store('shipstatic.apiKey', 'ship-existing');
-
-      const result = await ensureApiKey(ctx);
-
-      expect(result).toBe('ship-existing');
-      expect(window.showInputBox).not.toHaveBeenCalled();
-    });
-
-    it('prompts when no key stored', async () => {
-      window.showInputBox.mockResolvedValueOnce('ship-prompted');
-
-      const result = await ensureApiKey(ctx);
-
-      expect(result).toBe('ship-prompted');
-      expect(window.showInputBox).toHaveBeenCalledOnce();
     });
   });
 });

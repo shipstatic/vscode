@@ -1,8 +1,8 @@
 {
-  "name": "shipstatic",
-  "displayName": "ShipStatic",
-  "description": "Deploy and manage static sites — MCP tools for GitHub Copilot",
-  "version": "0.1.0",
+  "name": "ship",
+  "displayName": "Ship",
+  "description": "Deploy static sites instantly from chat or the command palette — free, no account needed",
+  "version": "0.2.0",
   "publisher": "shipstatic",
   "icon": "icon.png",
   "license": "MIT",
@@ -17,15 +17,23 @@
   "engines": {
     "vscode": "^1.99.0"
   },
+  "galleryBanner": {
+    "color": "#EE6723",
+    "theme": "dark"
+  },
   "categories": [
-    "Other"
+    "AI"
   ],
   "keywords": [
-    "mcp",
+    "shipstatic",
     "deploy",
     "hosting",
+    "chat",
+    "mcp",
+    "website",
     "static-site",
-    "copilot"
+    "ai",
+    "agent"
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
@@ -52,6 +60,7 @@
     ]
   },
   "scripts": {
+    "vscode:prepublish": "node esbuild.mjs",
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "test": "vitest",
@@ -60,8 +69,8 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@shipstatic/mcp": "^0.3.0",
-    "@shipstatic/ship": "^0.8.3",
+    "@shipstatic/mcp": "^0.4.0",
+    "@shipstatic/ship": "^0.8.6",
     "@types/vscode": "^1.99.0",
     "@vscode/vsce": "^3.0.0",
     "esbuild": "^0.25.0",

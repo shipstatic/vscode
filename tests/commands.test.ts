@@ -68,15 +68,12 @@ describe('commands', () => {
 
   describe('deploy', () => {
     it('shows error when no workspace folders', async () => {
-      await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
-
       await handlers.get('shipstatic.deploy')!();
 
       expect(window.showErrorMessage).toHaveBeenCalledWith(expect.stringContaining('Open a folder'));
     });
 
     it('returns early when user cancels folder picker', async () => {
-      await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
       workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
       window.showOpenDialog.mockResolvedValueOnce(undefined);
 
@@ -120,8 +117,70 @@ describe('commands', () => {
       expect(env.openExternal).toHaveBeenCalled();
     });
 
+    it('deploys without API key and shows expiry', async () => {
+      workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
+      window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
+      window.showInformationMessage.mockResolvedValueOnce(undefined);
+
+      const mockUpload = vi.fn().mockResolvedValue({
+        deployment: 'happy-cat-abc1234.shipstatic.com',
+        claim: 'https://my.shipstatic.com/claim/abc123',
+      });
+      MockShip.mockImplementationOnce(() => ({ deployments: { upload: mockUpload } }) as any);
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(MockShip).toHaveBeenCalledWith({});
+      expect(window.showInformationMessage).toHaveBeenCalledWith(
+        'Deployed to https://happy-cat-abc1234.shipstatic.com — expires in 3 days',
+        'Open in Browser',
+        'Copy URL',
+        'Set API Key',
+      );
+    });
+
+    it('offers Set API Key from claimable deploy notification', async () => {
+      workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
+      window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
+      window.showInformationMessage.mockResolvedValueOnce('Set API Key');
+      window.showInputBox.mockResolvedValueOnce('ship-newkey');
+
+      const mockUpload = vi.fn().mockResolvedValue({
+        deployment: 'happy-cat-abc1234.shipstatic.com',
+        claim: 'https://my.shipstatic.com/claim/abc123',
+      });
+      MockShip.mockImplementationOnce(() => ({ deployments: { upload: mockUpload } }) as any);
+
+      const { onDidChangeMcpServers } = await import('../src/mcp');
+      const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(ctx.secrets.store).toHaveBeenCalledWith('shipstatic.apiKey', 'ship-newkey');
+      expect(fireSpy).toHaveBeenCalled();
+    });
+
+    it('does not fire MCP event when Set API Key is cancelled', async () => {
+      workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
+      window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
+      window.showInformationMessage.mockResolvedValueOnce('Set API Key');
+      window.showInputBox.mockResolvedValueOnce(undefined);
+
+      const mockUpload = vi.fn().mockResolvedValue({
+        deployment: 'happy-cat-abc1234.shipstatic.com',
+        claim: 'https://my.shipstatic.com/claim/abc123',
+      });
+      MockShip.mockImplementationOnce(() => ({ deployments: { upload: mockUpload } }) as any);
+
+      const { onDidChangeMcpServers } = await import('../src/mcp');
+      const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(fireSpy).not.toHaveBeenCalled();
+    });
+
     it('shows error on deployment failure', async () => {
-      await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
       workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
       window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
 
@@ -156,6 +215,31 @@ describe('commands', () => {
       await handlers.get('shipstatic.whoami')!();
 
       expect(window.showErrorMessage).toHaveBeenCalledWith('ShipStatic: Unauthorized');
+    });
+
+    it('fires MCP change event when key is entered', async () => {
+      window.showInputBox.mockResolvedValueOnce('ship-newkey');
+
+      const { onDidChangeMcpServers } = await import('../src/mcp');
+      const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
+
+      await handlers.get('shipstatic.whoami')!();
+
+      expect(ctx.secrets.store).toHaveBeenCalledWith('shipstatic.apiKey', 'ship-newkey');
+      expect(fireSpy).toHaveBeenCalled();
+      expect(window.showInformationMessage).toHaveBeenCalledWith('ShipStatic: test@example.com (free)');
+    });
+
+    it('does not fire MCP event when key already stored', async () => {
+      await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
+
+      const { onDidChangeMcpServers } = await import('../src/mcp');
+      const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
+
+      await handlers.get('shipstatic.whoami')!();
+
+      expect(fireSpy).not.toHaveBeenCalled();
+      expect(window.showInputBox).not.toHaveBeenCalled();
     });
 
     it('does nothing when user cancels auth', async () => {

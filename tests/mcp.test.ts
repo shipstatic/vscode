@@ -60,23 +60,14 @@ describe('mcp', () => {
       expect(resolved.env.SHIP_API_KEY).toBe('ship-test123');
     });
 
-    it('prompts for API key when none stored', async () => {
-      window.showInputBox.mockResolvedValueOnce('ship-fromuser');
+    it('starts without API key when none stored', async () => {
       const server = new McpStdioServerDefinition('ShipStatic', 'node', []);
 
       const resolved = await provider.resolveMcpServerDefinition(server);
 
-      expect(window.showInputBox).toHaveBeenCalledOnce();
-      expect(resolved.env.SHIP_API_KEY).toBe('ship-fromuser');
-    });
-
-    it('returns undefined when user cancels auth', async () => {
-      window.showInputBox.mockResolvedValueOnce(undefined);
-      const server = new McpStdioServerDefinition('ShipStatic', 'node', []);
-
-      const resolved = await provider.resolveMcpServerDefinition(server);
-
-      expect(resolved).toBeUndefined();
+      expect(resolved).toBe(server);
+      expect(resolved.env.SHIP_API_KEY).toBeUndefined();
+      expect(window.showInputBox).not.toHaveBeenCalled();
     });
   });
 

@@ -26,8 +26,3 @@ export async function setApiKey(context: vscode.ExtensionContext): Promise<strin
   return undefined;
 }
 
-export async function ensureApiKey(context: vscode.ExtensionContext): Promise<string | undefined> {
-  const existing = await getApiKey(context);
-  if (existing) return existing;
-  return setApiKey(context);
-}
