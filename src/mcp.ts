@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { ensureApiKey } from './auth';
+import { getApiKey } from './auth';
 
 const emitter = new vscode.EventEmitter<void>();
 
@@ -22,11 +22,11 @@ export function registerMcpProvider(context: vscode.ExtensionContext) {
       ];
     },
 
-    // Called when the server is about to start — user interaction OK.
+    // Called when the server is about to start — no prompt.
+    // Server starts without API key (claimable deploys). User sets key via command.
     resolveMcpServerDefinition: async (server) => {
-      const apiKey = await ensureApiKey(context);
-      if (!apiKey) return undefined;
-      server.env = { SHIP_API_KEY: apiKey };
+      const apiKey = await getApiKey(context);
+      if (apiKey) server.env = { SHIP_API_KEY: apiKey };
       return server;
     },
   });
