@@ -76,11 +76,23 @@ The `vscode` module is mocked via vitest's `alias` config — named exports in `
 
 ## Publishing
 
-Published to the VS Code Marketplace under the `shipstatic` publisher.
+Published to both marketplaces under the `shipstatic` publisher:
+
+- **VS Code Marketplace:** https://marketplace.visualstudio.com/manage/publishers/shipstatic
+- **Open VSX:** https://open-vsx.org/extension/shipstatic/shipstatic
+
+**Release workflow** (`.github/workflows/release.yml`): push a `v*` tag to trigger build, test, GitHub Release (with `.vsix` artifact), and publish to both marketplaces.
+
+**Required secrets** (not yet configured):
+- `VSCE_PAT` — VS Code Marketplace personal access token
+- `OVSX_PAT` — Open VSX access token
+
+Both publish steps are skipped when their secret is not set.
 
 ```bash
 pnpm package         # Build .vsix locally
-pnpm publish         # Publish to marketplace (requires VSCE_PAT)
+pnpm publish         # Publish to VS Code Marketplace (requires VSCE_PAT)
+git tag v0.2.5 && git push origin v0.2.5   # Trigger release workflow
 ```
 
 ## Key Constraints
