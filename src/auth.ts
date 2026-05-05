@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { API_KEY, validateApiKey } from '@shipstatic/ship';
 
 const SECRET_KEY = 'shipstatic.apiKey';
 
@@ -9,12 +10,16 @@ export async function getApiKey(context: vscode.ExtensionContext): Promise<strin
 export async function setApiKey(context: vscode.ExtensionContext): Promise<string | undefined> {
   const key = await vscode.window.showInputBox({
     prompt: 'Enter your ShipStatic API key',
-    placeHolder: 'ship-...',
+    placeHolder: `${API_KEY.PREFIX}...`,
     password: true,
     ignoreFocusOut: true,
     validateInput: (value) => {
-      if (!value.startsWith('ship-')) return 'API key must start with "ship-"';
-      return null;
+      try {
+        validateApiKey(value);
+        return null;
+      } catch (error) {
+        return error instanceof Error ? error.message : 'Invalid API key';
+      }
     },
   });
 
@@ -25,4 +30,3 @@ export async function setApiKey(context: vscode.ExtensionContext): Promise<strin
 
   return undefined;
 }
-

@@ -32,6 +32,10 @@ A **deploy button** in the status bar provides one-click deployments.
 
 That's it. Your site is live instantly.
 
+### Password Protection
+
+Want a private site? The **Deploy** command prompts for an optional password (6–128 characters). When set, visitors must unlock before viewing — on the deployment URL and on any custom domains pointing at it. In agent mode, just ask: *"deploy with password hunter2"*.
+
 ### API Key (optional)
 
 Without an API key, deployments are public and expire in 3 days. For permanent deployments:
