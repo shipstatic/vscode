@@ -65,7 +65,7 @@ Without this, a developer with `SHIP_API_KEY` in their shell (typical for CLI us
 
 ### SDK Wrapper — No Business Logic
 
-Commands delegate directly to `@shipstatic/ship` SDK methods. No HTTP calls, no validation beyond what the SDK provides. Deployment tracking uses `via: 'vscode'`.
+Commands delegate directly to `@shipstatic/ship` SDK methods. No HTTP calls, no validation beyond what the SDK provides. Deployment tracking uses `via: 'vsc'` — must stay in lockstep with the `cloudflare/api` `ALLOWED_VIA_VALUES` allow-list (any drift silently downgrades to `via = NULL`).
 
 ### MCP Server Bundling
 
