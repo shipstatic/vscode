@@ -34,11 +34,23 @@ async function deploy(context: vscode.ExtensionContext) {
 
   if (!uri?.[0]) return;
 
+  const password = await vscode.window.showInputBox({
+    title: 'Password protection (optional)',
+    prompt: 'Leave empty to deploy without a password. 6–128 characters if set.',
+    password: true,
+    ignoreFocusOut: true,
+    placeHolder: 'No password',
+  });
+  if (password === undefined) return;
+
   try {
     const ship = apiKey ? new Ship({ apiKey }) : new Ship({});
     const result = await vscode.window.withProgress(
       { location: vscode.ProgressLocation.Notification, title: 'Deploying to ShipStatic...' },
-      () => ship.deployments.upload(uri[0].fsPath, { via: 'vscode' }),
+      () => ship.deployments.upload(uri[0].fsPath, {
+        via: 'vscode',
+        ...(password ? { password } : {}),
+      }),
     );
 
     const url = `https://${result.deployment}`;

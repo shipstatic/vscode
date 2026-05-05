@@ -9,11 +9,11 @@ importers:
   .:
     devDependencies:
       '@shipstatic/mcp':
-        specifier: ^0.4.3
-        version: 0.4.3(typescript@5.9.3)
+        specifier: ^0.4.8
+        version: 0.4.8(typescript@5.9.3)
       '@shipstatic/ship':
-        specifier: ^0.8.7
-        version: 0.8.7(typescript@5.9.3)
+        specifier: ^0.9.6
+        version: 0.9.6(typescript@5.9.3)
       '@types/vscode':
         specifier: ^1.99.0
         version: 1.110.0
@@ -610,13 +610,13 @@ packages:
     resolution: {integrity: sha512-Nqc90v4lWCXyakD6xNyNACBJNJ0tNCwj2WNk/7ivyacYHxiITVgmLUFXTBOeCdy79iz6HtN9Y31uw/jbLrdOAg==}
     engines: {node: '>=20.0.0'}
 
-  '@shipstatic/mcp@0.4.3':
-    resolution: {integrity: sha512-p+eKdgvV8zKojBWsWETR+NSo3DzkL0W0lw+QxCRP8FodxBBYPwF8087SZwmoZFmmUNJfWIXVBSDYyhxfRCyEUA==}
+  '@shipstatic/mcp@0.4.8':
+    resolution: {integrity: sha512-0Ch/9HJf2VhlSuCypYFZI9bNL0/9xySqQjPvYLj7aK+/JaHYkXIVRgU0n7jhsiQ6ABkoZqaAnt2+BdtBvnHUcQ==}
     engines: {node: '>=20.0.0'}
     hasBin: true
 
-  '@shipstatic/ship@0.8.7':
-    resolution: {integrity: sha512-Ox5lXhPWtZ0rnXBSweeG+R3BPXWs4iyrAbwv7Nud+PoW9+jUFryd+SQRHOIDCSK7uyUYV/TbMwx5GNzW4l/zjg==}
+  '@shipstatic/ship@0.9.6':
+    resolution: {integrity: sha512-jfLXBd2om2DChaXAkqLxtemjFEsZbR0bGo4jpjCbj/Sn9A718uSUCqSNXnzKhBLmvJ12JenxlzKNOdhrV6P8aw==}
     engines: {node: '>=20.0.0'}
     hasBin: true
 
@@ -2157,8 +2157,8 @@ packages:
   yazl@2.5.1:
     resolution: {integrity: sha512-phENi2PLiHnHb6QBVot+dJnaAZ0xosj7p3fWl+znIjBDlnMI2PsZCJZ306BPTFOaHf5qdDEI8x5qFrSOBN5vrw==}
 
-  yocto-spinner@1.1.0:
-    resolution: {integrity: sha512-/BY0AUXnS7IKO354uLLA2eRcWiqDifEbd6unXCsOxkFDAkhgUL3PH9X2bFoaU0YchnDXsF+iKleeTLJGckbXfA==}
+  yocto-spinner@1.2.0:
+    resolution: {integrity: sha512-Yw0hUB6UA3o4YUgKy3oSe9a4cxoaZ9sBfYDw+JSxo6Id0KoJGoxzPA24qqUXYKBWABs/zDSGTz9kww7t3F0XGw==}
     engines: {node: '>=18.19'}
 
   yoctocolors@2.1.2:
@@ -2172,6 +2172,9 @@ packages:
 
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
+
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
 snapshots:
 
@@ -2619,17 +2622,17 @@ snapshots:
 
   '@secretlint/types@10.2.2': {}
 
-  '@shipstatic/mcp@0.4.3(typescript@5.9.3)':
+  '@shipstatic/mcp@0.4.8(typescript@5.9.3)':
     dependencies:
       '@modelcontextprotocol/sdk': 1.29.0(zod@4.3.6)
-      '@shipstatic/ship': 0.8.7(typescript@5.9.3)
+      '@shipstatic/ship': 0.9.6(typescript@5.9.3)
       zod: 4.3.6
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - supports-color
       - typescript
 
-  '@shipstatic/ship@0.8.7(typescript@5.9.3)':
+  '@shipstatic/ship@0.9.6(typescript@5.9.3)':
     dependencies:
       columnify: 1.6.0
       commander: 12.1.0
@@ -2638,9 +2641,9 @@ snapshots:
       formdata-node: 6.0.3
       junk: 4.0.1
       spark-md5: 3.0.2
-      yocto-spinner: 1.1.0
+      yocto-spinner: 1.2.0
       yoctocolors: 2.1.2
-      zod: 4.3.6
+      zod: 4.4.3
     transitivePeerDependencies:
       - typescript
 
@@ -4320,7 +4323,7 @@ snapshots:
     dependencies:
       buffer-crc32: 0.2.13
 
-  yocto-spinner@1.1.0:
+  yocto-spinner@1.2.0:
     dependencies:
       yoctocolors: 2.1.2
 
@@ -4331,3 +4334,5 @@ snapshots:
       zod: 4.3.6
 
   zod@4.3.6: {}
+
+  zod@4.4.3: {}
