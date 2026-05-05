@@ -69,7 +69,7 @@
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "test": "vitest",
-    "package": "vsce package",
+    "package": "vsce package --out dist/",
     "publish": "vsce publish",
     "prepare": "husky"
   },
