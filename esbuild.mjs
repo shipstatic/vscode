@@ -3,6 +3,7 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 const isWatch = process.argv.includes('--watch');
+const mcpVersion = require('@shipstatic/mcp/package.json').version;
 
 const shared = {
   bundle: true,
@@ -28,20 +29,41 @@ const mcpConfig = {
   ...shared,
   entryPoints: { 'mcp-server': require.resolve('@shipstatic/mcp') },
   outfile: 'dist/mcp-server.js',
-  // Strip the source shebang — VS Code spawns with `node` explicitly
-  plugins: [{
-    name: 'strip-shebang',
-    setup(build) {
-      build.onLoad({ filter: /@shipstatic[\\/]mcp[\\/]dist[\\/]index\.js$/ }, async (args) => {
-        const { readFile } = await import('fs/promises');
-        let contents = await readFile(args.path, 'utf8');
-        if (contents.startsWith('#!')) {
-          contents = contents.replace(/^#![^\n]*\n/, '');
-        }
-        return { contents, loader: 'js' };
-      });
+  plugins: [
+    // Strip the source shebang — VS Code spawns with `node` explicitly
+    {
+      name: 'strip-shebang',
+      setup(build) {
+        build.onLoad({ filter: /@shipstatic[\\/]mcp[\\/]dist[\\/]index\.js$/ }, async (args) => {
+          const { readFile } = await import('fs/promises');
+          let contents = await readFile(args.path, 'utf8');
+          if (contents.startsWith('#!')) {
+            contents = contents.replace(/^#![^\n]*\n/, '');
+          }
+          return { contents, loader: 'js' };
+        });
+      },
     },
-  }],
+    // Inline the MCP version string. The MCP source loads it via
+    // `createRequire(import.meta.url)('../package.json')`, which fails when
+    // bundled to CJS (no `import.meta.url`). We read the version statically
+    // from the installed @shipstatic/mcp/package.json — no patching of the
+    // MCP source itself.
+    {
+      name: 'inline-mcp-version',
+      setup(build) {
+        build.onLoad({ filter: /@shipstatic[\\/]mcp[\\/]dist[\\/]server\.js$/ }, async (args) => {
+          const { readFile } = await import('fs/promises');
+          const original = await readFile(args.path, 'utf8');
+          const contents = original.replace(
+            /const \{ version \} = createRequire\(import\.meta\.url\)\('\.\.\/package\.json'\);?/,
+            `const version = ${JSON.stringify(mcpVersion)};`,
+          );
+          return { contents, loader: 'js' };
+        });
+      },
+    },
+  ],
 };
 
 if (isWatch) {

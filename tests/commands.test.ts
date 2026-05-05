@@ -82,10 +82,21 @@ describe('commands', () => {
       expect(MockShip).not.toHaveBeenCalled();
     });
 
+    it('returns early when user cancels password prompt', async () => {
+      workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
+      window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
+      window.showInputBox.mockResolvedValueOnce(undefined);
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(MockShip).not.toHaveBeenCalled();
+    });
+
     it('deploys with correct SDK args and shows URL', async () => {
       await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
       workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
       window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
+      window.showInputBox.mockResolvedValueOnce('');
       window.showInformationMessage.mockResolvedValueOnce('Copy URL');
 
       const mockUpload = vi.fn().mockResolvedValue({ deployment: 'happy-cat-abc1234.shipstatic.com' });
@@ -95,7 +106,7 @@ describe('commands', () => {
 
       // Verify SDK is constructed with the stored API key
       expect(MockShip).toHaveBeenCalledWith({ apiKey: 'ship-test' });
-      // Verify upload is called with selected path and via tracking
+      // Verify upload is called with selected path and via tracking (no password)
       expect(mockUpload).toHaveBeenCalledWith('/test/dist', { via: 'vscode' });
       // Verify URL shown to user
       expect(window.showInformationMessage).toHaveBeenCalledWith(
@@ -106,10 +117,26 @@ describe('commands', () => {
       expect(env.clipboard.writeText).toHaveBeenCalledWith('https://happy-cat-abc1234.shipstatic.com');
     });
 
+    it('forwards password to the SDK when user provides one', async () => {
+      await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
+      workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
+      window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
+      window.showInputBox.mockResolvedValueOnce('hunter2!');
+      window.showInformationMessage.mockResolvedValueOnce(undefined);
+
+      const mockUpload = vi.fn().mockResolvedValue({ deployment: 'happy-cat-abc1234.shipstatic.com' });
+      MockShip.mockImplementationOnce(() => ({ deployments: { upload: mockUpload } }) as any);
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(mockUpload).toHaveBeenCalledWith('/test/dist', { via: 'vscode', password: 'hunter2!' });
+    });
+
     it('opens browser when user selects "Open in Browser"', async () => {
       await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
       workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
       window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
+      window.showInputBox.mockResolvedValueOnce('');
       window.showInformationMessage.mockResolvedValueOnce('Open in Browser');
 
       await handlers.get('shipstatic.deploy')!();
@@ -120,6 +147,7 @@ describe('commands', () => {
     it('deploys without API key and shows expiry', async () => {
       workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
       window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
+      window.showInputBox.mockResolvedValueOnce('');
       window.showInformationMessage.mockResolvedValueOnce(undefined);
 
       const mockUpload = vi.fn().mockResolvedValue({
@@ -142,8 +170,10 @@ describe('commands', () => {
     it('offers Set API Key from claimable deploy notification', async () => {
       workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
       window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
+      window.showInputBox
+        .mockResolvedValueOnce('') // password prompt
+        .mockResolvedValueOnce('ship-newkey'); // Set API Key prompt
       window.showInformationMessage.mockResolvedValueOnce('Set API Key');
-      window.showInputBox.mockResolvedValueOnce('ship-newkey');
 
       const mockUpload = vi.fn().mockResolvedValue({
         deployment: 'happy-cat-abc1234.shipstatic.com',
@@ -163,8 +193,10 @@ describe('commands', () => {
     it('does not fire MCP event when Set API Key is cancelled', async () => {
       workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
       window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
+      window.showInputBox
+        .mockResolvedValueOnce('') // password prompt
+        .mockResolvedValueOnce(undefined); // Set API Key cancelled
       window.showInformationMessage.mockResolvedValueOnce('Set API Key');
-      window.showInputBox.mockResolvedValueOnce(undefined);
 
       const mockUpload = vi.fn().mockResolvedValue({
         deployment: 'happy-cat-abc1234.shipstatic.com',
@@ -183,6 +215,7 @@ describe('commands', () => {
     it('shows error on deployment failure', async () => {
       workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
       window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
+      window.showInputBox.mockResolvedValueOnce('');
 
       MockShip.mockImplementationOnce(() => ({
         deployments: {
