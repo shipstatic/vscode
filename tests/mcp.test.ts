@@ -66,8 +66,21 @@ describe('mcp', () => {
       const resolved = await provider.resolveMcpServerDefinition(server);
 
       expect(resolved).toBe(server);
-      expect(resolved.env.SHIP_API_KEY).toBeUndefined();
+      expect(resolved.env.SHIP_API_KEY).toBeNull();
       expect(window.showInputBox).not.toHaveBeenCalled();
+    });
+
+    it('scrubs SHIP_* env vars to enforce SecretStorage as the sole credential source', async () => {
+      const server = new McpStdioServerDefinition('ShipStatic', 'node', []);
+
+      const resolved = await provider.resolveMcpServerDefinition(server);
+
+      // Every SHIP_* var explicitly nulled — prevents shell-env leak into "anonymous" deploys.
+      expect(resolved.env).toEqual({
+        SHIP_API_KEY: null,
+        SHIP_DEPLOY_TOKEN: null,
+        SHIP_API_URL: null,
+      });
     });
   });
 

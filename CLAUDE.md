@@ -30,7 +30,7 @@ esbuild (build time)
 ```bash
 pnpm install        # Install dependencies
 pnpm build          # Build both entry points → dist/
-pnpm test --run     # All tests (32 tests, ~350ms)
+pnpm test --run     # All tests (40 tests, ~350ms)
 pnpm watch          # Watch mode (no minification)
 ```
 
@@ -47,9 +47,21 @@ The extension registers a `McpServerDefinitionProvider` via `vscode.lm.registerM
 
 ### Credential Management
 
-API key stored in VS Code's `SecretStorage` (OS keychain, encrypted). Never in `settings.json`. Passed to MCP server child process via `SHIP_API_KEY` env var — exactly what `@shipstatic/mcp` expects.
+API key stored in VS Code's `SecretStorage` (OS keychain, encrypted). Never in `settings.json`. Passed to MCP server child process via `SHIP_API_KEY` env var — exactly what `@shipstatic/mcp` expects. Validation (prefix + length) is delegated to `validateApiKey()` from `@shipstatic/ship` so the rule lives in one place.
 
 Every path that stores a new key fires `onDidChangeMcpServerDefinitions` so VS Code re-queries the provider: `setApiKey` command, deploy's "Set API Key" action, and whoami's key prompt.
+
+**Strict env isolation.** `resolveMcpServerDefinition` explicitly nulls every `SHIP_*` env var on the spawned child:
+
+```ts
+server.env = {
+  SHIP_API_KEY: apiKey ?? null,
+  SHIP_DEPLOY_TOKEN: null,
+  SHIP_API_URL: null,
+};
+```
+
+Without this, a developer with `SHIP_API_KEY` in their shell (typical for CLI use) would silently authenticate "anonymous" agent-mode deploys via env inheritance — contradicting the README's claimable-deploy promise. SecretStorage is the **sole** credential source. Per `@shipstatic/ship` "strict-isolation contract for embedded hosts", scrubbing is the host's responsibility, not the SDK's.
 
 ### SDK Wrapper — No Business Logic
 
@@ -66,9 +78,9 @@ The `.vsix` ships `dist/extension.js` + `dist/mcp-server.js` + metadata. No `nod
 ```
 tests/
 ├── vscode.mock.ts       # vscode module mock (alias in vitest.config.ts)
-├── auth.test.ts         # SecretStorage flows (5 tests)
-├── mcp.test.ts          # Provider registration + resolve lifecycle (8 tests)
-├── commands.test.ts     # All 3 commands + SDK arg verification (16 tests)
+├── auth.test.ts         # SecretStorage flows + API key validation (8 tests)
+├── mcp.test.ts          # Provider registration + resolve lifecycle + env scrub (9 tests)
+├── commands.test.ts     # All 3 commands + SDK arg verification (19 tests)
 └── status-bar.test.ts   # Item properties + disposal (3 tests)
 ```
 

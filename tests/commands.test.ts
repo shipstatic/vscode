@@ -2,14 +2,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { commands, window, env, workspace, createMockContext } from './vscode.mock';
 import { registerCommands } from '../src/commands';
 
-// Mock Ship SDK
+// Mock Ship SDK — keep named exports used by commands.ts and auth.ts
 vi.mock('@shipstatic/ship', () => ({
   default: vi.fn().mockImplementation(() => ({
     deployments: {
-      upload: vi.fn().mockResolvedValue({ deployment: 'happy-cat-abc1234.shipstatic.com' }),
+      upload: vi.fn().mockResolvedValue({
+        deployment: 'happy-cat-abc1234.shipstatic.com',
+        url: 'https://happy-cat-abc1234.shipstatic.com',
+      }),
     },
-    whoami: vi.fn().mockResolvedValue({ email: 'test@example.com', plan: 'free' }),
+    whoami: vi.fn().mockResolvedValue({
+      email: 'test@example.com',
+      plan: 'free',
+      usage: { customDomains: 0 },
+    }),
   })),
+  PASSWORD_CONSTRAINTS: { MIN_LENGTH: 6, MAX_LENGTH: 128 },
+  API_KEY: { PREFIX: 'ship-', HEX_LENGTH: 64, TOTAL_LENGTH: 69, HINT_LENGTH: 4 },
+  validateApiKey: vi.fn(),
 }));
 
 // Get the mock Ship constructor for per-test control
@@ -99,7 +109,10 @@ describe('commands', () => {
       window.showInputBox.mockResolvedValueOnce('');
       window.showInformationMessage.mockResolvedValueOnce('Copy URL');
 
-      const mockUpload = vi.fn().mockResolvedValue({ deployment: 'happy-cat-abc1234.shipstatic.com' });
+      const mockUpload = vi.fn().mockResolvedValue({
+        deployment: 'happy-cat-abc1234.shipstatic.com',
+        url: 'https://happy-cat-abc1234.shipstatic.com',
+      });
       MockShip.mockImplementationOnce(() => ({ deployments: { upload: mockUpload } }) as any);
 
       await handlers.get('shipstatic.deploy')!();
@@ -108,7 +121,7 @@ describe('commands', () => {
       expect(MockShip).toHaveBeenCalledWith({ apiKey: 'ship-test' });
       // Verify upload is called with selected path and via tracking (no password)
       expect(mockUpload).toHaveBeenCalledWith('/test/dist', { via: 'vscode' });
-      // Verify URL shown to user
+      // Verify URL shown to user — uses canonical result.url, not reconstructed
       expect(window.showInformationMessage).toHaveBeenCalledWith(
         'Deployed to https://happy-cat-abc1234.shipstatic.com',
         'Open in Browser',
@@ -124,7 +137,10 @@ describe('commands', () => {
       window.showInputBox.mockResolvedValueOnce('hunter2!');
       window.showInformationMessage.mockResolvedValueOnce(undefined);
 
-      const mockUpload = vi.fn().mockResolvedValue({ deployment: 'happy-cat-abc1234.shipstatic.com' });
+      const mockUpload = vi.fn().mockResolvedValue({
+        deployment: 'happy-cat-abc1234.shipstatic.com',
+        url: 'https://happy-cat-abc1234.shipstatic.com',
+      });
       MockShip.mockImplementationOnce(() => ({ deployments: { upload: mockUpload } }) as any);
 
       await handlers.get('shipstatic.deploy')!();
@@ -152,6 +168,7 @@ describe('commands', () => {
 
       const mockUpload = vi.fn().mockResolvedValue({
         deployment: 'happy-cat-abc1234.shipstatic.com',
+        url: 'https://happy-cat-abc1234.shipstatic.com',
         claim: 'https://my.shipstatic.com/claim/abc123',
       });
       MockShip.mockImplementationOnce(() => ({ deployments: { upload: mockUpload } }) as any);
@@ -177,6 +194,7 @@ describe('commands', () => {
 
       const mockUpload = vi.fn().mockResolvedValue({
         deployment: 'happy-cat-abc1234.shipstatic.com',
+        url: 'https://happy-cat-abc1234.shipstatic.com',
         claim: 'https://my.shipstatic.com/claim/abc123',
       });
       MockShip.mockImplementationOnce(() => ({ deployments: { upload: mockUpload } }) as any);
@@ -200,6 +218,7 @@ describe('commands', () => {
 
       const mockUpload = vi.fn().mockResolvedValue({
         deployment: 'happy-cat-abc1234.shipstatic.com',
+        url: 'https://happy-cat-abc1234.shipstatic.com',
         claim: 'https://my.shipstatic.com/claim/abc123',
       });
       MockShip.mockImplementationOnce(() => ({ deployments: { upload: mockUpload } }) as any);
@@ -230,12 +249,49 @@ describe('commands', () => {
   });
 
   describe('whoami', () => {
-    it('shows account info', async () => {
+    it('shows account info including custom domain usage (singular)', async () => {
+      await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
+      MockShip.mockImplementationOnce(() => ({
+        whoami: vi.fn().mockResolvedValue({
+          email: 'test@example.com',
+          plan: 'standard',
+          usage: { customDomains: 1 },
+        }),
+      }) as any);
+
+      await handlers.get('shipstatic.whoami')!();
+
+      expect(window.showInformationMessage).toHaveBeenCalledWith(
+        'ShipStatic: test@example.com (standard) · 1 custom domain',
+      );
+    });
+
+    it('shows account info with plural domain count', async () => {
+      await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
+      MockShip.mockImplementationOnce(() => ({
+        whoami: vi.fn().mockResolvedValue({
+          email: 'test@example.com',
+          plan: 'free',
+          usage: { customDomains: 3 },
+        }),
+      }) as any);
+
+      await handlers.get('shipstatic.whoami')!();
+
+      expect(window.showInformationMessage).toHaveBeenCalledWith(
+        'ShipStatic: test@example.com (free) · 3 custom domains',
+      );
+    });
+
+    it('shows zero domains as plural', async () => {
       await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
 
       await handlers.get('shipstatic.whoami')!();
 
-      expect(window.showInformationMessage).toHaveBeenCalledWith('ShipStatic: test@example.com (free)');
+      // Default mock returns customDomains: 0
+      expect(window.showInformationMessage).toHaveBeenCalledWith(
+        'ShipStatic: test@example.com (free) · 0 custom domains',
+      );
     });
 
     it('shows error on failure', async () => {
@@ -260,7 +316,9 @@ describe('commands', () => {
 
       expect(ctx.secrets.store).toHaveBeenCalledWith('shipstatic.apiKey', 'ship-newkey');
       expect(fireSpy).toHaveBeenCalled();
-      expect(window.showInformationMessage).toHaveBeenCalledWith('ShipStatic: test@example.com (free)');
+      expect(window.showInformationMessage).toHaveBeenCalledWith(
+        'ShipStatic: test@example.com (free) · 0 custom domains',
+      );
     });
 
     it('does not fire MCP event when key already stored', async () => {

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import Ship from '@shipstatic/ship';
+import Ship, { PASSWORD_CONSTRAINTS } from '@shipstatic/ship';
 import { getApiKey, setApiKey } from './auth';
 import { onDidChangeMcpServers } from './mcp';
 
@@ -36,7 +36,7 @@ async function deploy(context: vscode.ExtensionContext) {
 
   const password = await vscode.window.showInputBox({
     title: 'Password protection (optional)',
-    prompt: 'Leave empty to deploy without a password. 6–128 characters if set.',
+    prompt: `Leave empty to deploy without a password. ${PASSWORD_CONSTRAINTS.MIN_LENGTH}–${PASSWORD_CONSTRAINTS.MAX_LENGTH} characters if set.`,
     password: true,
     ignoreFocusOut: true,
     placeHolder: 'No password',
@@ -53,7 +53,7 @@ async function deploy(context: vscode.ExtensionContext) {
       }),
     );
 
-    const url = `https://${result.deployment}`;
+    const url = result.url;
     const actions: string[] = ['Open in Browser', 'Copy URL'];
     if (result.claim) actions.push('Set API Key');
 
@@ -85,8 +85,9 @@ async function whoami(context: vscode.ExtensionContext) {
   try {
     const ship = new Ship({ apiKey });
     const account = await ship.whoami();
+    const customDomains = account.usage.customDomains;
     vscode.window.showInformationMessage(
-      `ShipStatic: ${account.email} (${account.plan})`,
+      `ShipStatic: ${account.email} (${account.plan}) · ${customDomains} custom domain${customDomains === 1 ? '' : 's'}`,
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to get account info';

@@ -28,20 +28,23 @@ jobs:
       - run: pnpm package
         # produces dist/shipstatic-$VERSION.vsix
 
+      - id: vsix
+        run: echo "path=dist/shipstatic-$(jq -r .version package.json).vsix" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: "dist/*.vsix"
+          files: ${{ steps.vsix.outputs.path }}
           generate_release_notes: true
 
       - name: Publish to VS Code Marketplace
         if: env.VSCE_PAT != ''
-        run: npx vsce publish --packagePath dist/*.vsix
+        run: npx vsce publish --packagePath ${{ steps.vsix.outputs.path }}
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
       - name: Publish to Open VSX
         if: env.OVSX_PAT != ''
-        run: npx ovsx publish dist/*.vsix -p "$OVSX_PAT"
+        run: npx ovsx publish ${{ steps.vsix.outputs.path }} -p "$OVSX_PAT"
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
