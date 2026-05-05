@@ -120,7 +120,7 @@ describe('commands', () => {
       // Verify SDK is constructed with the stored API key
       expect(MockShip).toHaveBeenCalledWith({ apiKey: 'ship-test' });
       // Verify upload is called with selected path and via tracking (no password)
-      expect(mockUpload).toHaveBeenCalledWith('/test/dist', { via: 'vscode' });
+      expect(mockUpload).toHaveBeenCalledWith('/test/dist', { via: 'vsc' });
       // Verify URL shown to user — uses canonical result.url, not reconstructed
       expect(window.showInformationMessage).toHaveBeenCalledWith(
         'Deployed to https://happy-cat-abc1234.shipstatic.com',
@@ -145,7 +145,7 @@ describe('commands', () => {
 
       await handlers.get('shipstatic.deploy')!();
 
-      expect(mockUpload).toHaveBeenCalledWith('/test/dist', { via: 'vscode', password: 'hunter2!' });
+      expect(mockUpload).toHaveBeenCalledWith('/test/dist', { via: 'vsc', password: 'hunter2!' });
     });
 
     it('opens browser when user selects "Open in Browser"', async () => {

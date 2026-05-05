@@ -48,7 +48,7 @@ async function deploy(context: vscode.ExtensionContext) {
     const result = await vscode.window.withProgress(
       { location: vscode.ProgressLocation.Notification, title: 'Deploying to ShipStatic...' },
       () => ship.deployments.upload(uri[0].fsPath, {
-        via: 'vscode',
+        via: 'vsc',
         ...(password ? { password } : {}),
       }),
     );
