@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { window, createMockContext } from './vscode.mock';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getApiKey, setApiKey } from '../src/auth';
+import { createMockContext, window } from './vscode.mock';
 
 const VALID_KEY = 'ship-' + 'a'.repeat(64); // 69 chars, matches API_KEY.TOTAL_LENGTH
 

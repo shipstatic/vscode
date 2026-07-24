@@ -1,5 +1,5 @@
-import * as vscode from 'vscode';
 import Ship, { PASSWORD_CONSTRAINTS } from '@shipstatic/ship';
+import * as vscode from 'vscode';
 import { getApiKey, setApiKey } from './auth';
 import { onDidChangeMcpServers } from './mcp';
 
@@ -47,10 +47,11 @@ async function deploy(context: vscode.ExtensionContext) {
     const ship = apiKey ? new Ship({ apiKey }) : new Ship({});
     const result = await vscode.window.withProgress(
       { location: vscode.ProgressLocation.Notification, title: 'Deploying to ShipStatic...' },
-      () => ship.deployments.upload(uri[0].fsPath, {
-        via: 'vsc',
-        ...(password ? { password } : {}),
-      }),
+      () =>
+        ship.deployments.upload(uri[0].fsPath, {
+          via: 'vsc',
+          ...(password ? { password } : {}),
+        }),
     );
 
     const url = result.url;

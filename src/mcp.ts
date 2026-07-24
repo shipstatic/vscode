@@ -1,5 +1,5 @@
-import * as vscode from 'vscode';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { getApiKey } from './auth';
 
 const emitter = new vscode.EventEmitter<void>();
@@ -14,11 +14,9 @@ export function registerMcpProvider(context: vscode.ExtensionContext) {
     // Called eagerly — MUST NOT require user interaction.
     provideMcpServerDefinitions: async () => {
       return [
-        new vscode.McpStdioServerDefinition(
-          'ShipStatic',
-          process.execPath,
-          [path.join(context.extensionPath, 'dist', 'mcp-server.js')],
-        ),
+        new vscode.McpStdioServerDefinition('ShipStatic', process.execPath, [
+          path.join(context.extensionPath, 'dist', 'mcp-server.js'),
+        ]),
       ];
     },
 
