@@ -28,12 +28,16 @@ export function registerMcpProvider(context: vscode.ExtensionContext) {
     // use can't silently authenticate "anonymous" agent-mode deploys
     // (per @shipstatic/ship "strict-isolation contract for embedded hosts").
     resolveMcpServerDefinition: async (server) => {
-      const apiKey = await getApiKey(context);
-      server.env = {
-        SHIP_API_KEY: apiKey ?? null,
-        SHIP_DEPLOY_TOKEN: null,
-        SHIP_API_URL: null,
-      };
+      // This provider only ever provides stdio definitions; the narrowing
+      // tells the type system what the provider already guarantees.
+      if (server instanceof vscode.McpStdioServerDefinition) {
+        const apiKey = await getApiKey(context);
+        server.env = {
+          SHIP_API_KEY: apiKey ?? null,
+          SHIP_DEPLOY_TOKEN: null,
+          SHIP_API_URL: null,
+        };
+      }
       return server;
     },
   });
