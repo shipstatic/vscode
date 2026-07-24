@@ -14,7 +14,9 @@ export class EventEmitter<T = void> {
     this.listeners.push(listener);
     return { dispose: () => {} };
   };
-  fire = (...args: any[]) => this.listeners.forEach((l) => l(...args));
+  fire = (...args: any[]) => {
+    for (const l of this.listeners) l(...args);
+  };
   dispose = vi.fn();
 }
 
