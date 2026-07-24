@@ -73,8 +73,5 @@ if (isWatch) {
   ]);
   await Promise.all([ctx1.watch(), ctx2.watch()]);
 } else {
-  await Promise.all([
-    esbuild.build(extensionConfig),
-    esbuild.build(mcpConfig),
-  ]);
+  await Promise.all([esbuild.build(extensionConfig), esbuild.build(mcpConfig)]);
 }

@@ -1,5 +1,5 @@
-import * as vscode from 'vscode';
 import { API_KEY, validateApiKey } from '@shipstatic/ship';
+import * as vscode from 'vscode';
 
 const SECRET_KEY = 'shipstatic.apiKey';
 

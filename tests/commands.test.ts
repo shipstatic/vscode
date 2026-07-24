@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { commands, window, env, workspace, createMockContext } from './vscode.mock';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerCommands } from '../src/commands';
+import { commands, createMockContext, env, window, workspace } from './vscode.mock';
 
 // Mock Ship SDK — keep named exports used by commands.ts and auth.ts
 vi.mock('@shipstatic/ship', () => ({
@@ -24,6 +24,7 @@ vi.mock('@shipstatic/ship', () => ({
 
 // Get the mock Ship constructor for per-test control
 import Ship from '@shipstatic/ship';
+
 const MockShip = vi.mocked(Ship);
 
 describe('commands', () => {
@@ -80,7 +81,9 @@ describe('commands', () => {
     it('shows error when no workspace folders', async () => {
       await handlers.get('shipstatic.deploy')!();
 
-      expect(window.showErrorMessage).toHaveBeenCalledWith(expect.stringContaining('Open a folder'));
+      expect(window.showErrorMessage).toHaveBeenCalledWith(
+        expect.stringContaining('Open a folder'),
+      );
     });
 
     it('returns early when user cancels folder picker', async () => {
@@ -127,7 +130,9 @@ describe('commands', () => {
         'Open in Browser',
         'Copy URL',
       );
-      expect(env.clipboard.writeText).toHaveBeenCalledWith('https://happy-cat-abc1234.shipstatic.com');
+      expect(env.clipboard.writeText).toHaveBeenCalledWith(
+        'https://happy-cat-abc1234.shipstatic.com',
+      );
     });
 
     it('forwards password to the SDK when user provides one', async () => {
@@ -236,11 +241,14 @@ describe('commands', () => {
       window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
       window.showInputBox.mockResolvedValueOnce('');
 
-      MockShip.mockImplementationOnce(() => ({
-        deployments: {
-          upload: vi.fn().mockRejectedValue(new Error('Upload failed')),
-        },
-      }) as any);
+      MockShip.mockImplementationOnce(
+        () =>
+          ({
+            deployments: {
+              upload: vi.fn().mockRejectedValue(new Error('Upload failed')),
+            },
+          }) as any,
+      );
 
       await handlers.get('shipstatic.deploy')!();
 
@@ -251,13 +259,16 @@ describe('commands', () => {
   describe('whoami', () => {
     it('shows account info including custom domain usage (singular)', async () => {
       await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
-      MockShip.mockImplementationOnce(() => ({
-        whoami: vi.fn().mockResolvedValue({
-          email: 'test@example.com',
-          plan: 'standard',
-          usage: { customDomains: 1 },
-        }),
-      }) as any);
+      MockShip.mockImplementationOnce(
+        () =>
+          ({
+            whoami: vi.fn().mockResolvedValue({
+              email: 'test@example.com',
+              plan: 'standard',
+              usage: { customDomains: 1 },
+            }),
+          }) as any,
+      );
 
       await handlers.get('shipstatic.whoami')!();
 
@@ -268,13 +279,16 @@ describe('commands', () => {
 
     it('shows account info with plural domain count', async () => {
       await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
-      MockShip.mockImplementationOnce(() => ({
-        whoami: vi.fn().mockResolvedValue({
-          email: 'test@example.com',
-          plan: 'free',
-          usage: { customDomains: 3 },
-        }),
-      }) as any);
+      MockShip.mockImplementationOnce(
+        () =>
+          ({
+            whoami: vi.fn().mockResolvedValue({
+              email: 'test@example.com',
+              plan: 'free',
+              usage: { customDomains: 3 },
+            }),
+          }) as any,
+      );
 
       await handlers.get('shipstatic.whoami')!();
 
@@ -297,9 +311,12 @@ describe('commands', () => {
     it('shows error on failure', async () => {
       await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
 
-      MockShip.mockImplementationOnce(() => ({
-        whoami: vi.fn().mockRejectedValue(new Error('Unauthorized')),
-      }) as any);
+      MockShip.mockImplementationOnce(
+        () =>
+          ({
+            whoami: vi.fn().mockRejectedValue(new Error('Unauthorized')),
+          }) as any,
+      );
 
       await handlers.get('shipstatic.whoami')!();
 

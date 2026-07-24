@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { lm, McpStdioServerDefinition, window, createMockContext } from './vscode.mock';
-import { registerMcpProvider, onDidChangeMcpServers } from '../src/mcp';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { onDidChangeMcpServers, registerMcpProvider } from '../src/mcp';
+import { createMockContext, lm, McpStdioServerDefinition, window } from './vscode.mock';
 
 describe('mcp', () => {
   let ctx: ReturnType<typeof createMockContext>;
@@ -20,7 +20,10 @@ describe('mcp', () => {
   });
 
   it('registers provider with id "shipstatic"', () => {
-    expect(lm.registerMcpServerDefinitionProvider).toHaveBeenCalledWith('shipstatic', expect.any(Object));
+    expect(lm.registerMcpServerDefinitionProvider).toHaveBeenCalledWith(
+      'shipstatic',
+      expect.any(Object),
+    );
   });
 
   it('adds disposables to context subscriptions', () => {
@@ -87,7 +90,9 @@ describe('mcp', () => {
   describe('onDidChangeMcpServers', () => {
     it('fires event that triggers provider re-query', () => {
       let fired = false;
-      provider.onDidChangeMcpServerDefinitions(() => { fired = true; });
+      provider.onDidChangeMcpServerDefinitions(() => {
+        fired = true;
+      });
 
       onDidChangeMcpServers.fire();
 

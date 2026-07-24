@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { _statusBarItem, createMockContext } from './vscode.mock';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createStatusBarItem } from '../src/status-bar';
+import { _statusBarItem, createMockContext } from './vscode.mock';
 
 describe('status-bar', () => {
   let ctx: ReturnType<typeof createMockContext>;

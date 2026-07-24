@@ -25,7 +25,13 @@ export class McpStdioServerDefinition {
   env: Record<string, string | number | null> = {};
   version?: string;
 
-  constructor(label: string, command: string, args?: string[], env?: Record<string, string | number | null>, version?: string) {
+  constructor(
+    label: string,
+    command: string,
+    args?: string[],
+    env?: Record<string, string | number | null>,
+    version?: string,
+  ) {
     this.label = label;
     this.command = command;
     this.args = args ?? [];
@@ -67,7 +73,9 @@ export const commands = {
 };
 
 export const lm = {
-  registerMcpServerDefinitionProvider: vi.fn((_id: string, _provider: any) => ({ dispose: () => {} })),
+  registerMcpServerDefinitionProvider: vi.fn((_id: string, _provider: any) => ({
+    dispose: () => {},
+  })),
 };
 
 export const workspace: { workspaceFolders: any[] | undefined } = {
@@ -86,8 +94,12 @@ export function createMockContext() {
   return {
     secrets: {
       get: vi.fn(async (key: string) => store.get(key)),
-      store: vi.fn(async (key: string, value: string) => { store.set(key, value); }),
-      delete: vi.fn(async (key: string) => { store.delete(key); }),
+      store: vi.fn(async (key: string, value: string) => {
+        store.set(key, value);
+      }),
+      delete: vi.fn(async (key: string) => {
+        store.delete(key);
+      }),
     },
     extensionPath: '/mock/extension',
     subscriptions: [] as { dispose: () => void }[],
