@@ -14,7 +14,7 @@
   "bugs": {
     "url": "https://github.com/shipstatic/vscode/issues"
   },
-  "packageManager": "pnpm@10.27.0",
+  "packageManager": "pnpm@10.12.4",
   "engines": {
     "vscode": "^1.99.0"
   },
@@ -73,15 +73,17 @@
     "test": "vitest",
     "package": "vsce package --out dist/",
     "publish": "vsce publish",
-    "prepare": "husky"
+    "prepare": "git config core.hooksPath scripts/githooks",
+    "lint": "biome check .",
+    "format": "biome format --write ."
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.5",
     "@shipstatic/mcp": "^0.4.8",
     "@shipstatic/ship": "^0.9.6",
     "@types/vscode": "^1.99.0",
     "@vscode/vsce": "^3.0.0",
     "esbuild": "^0.25.0",
-    "husky": "^9.1.7",
     "typescript": "^5.9.0",
     "vitest": "^3.2.0"
   }
