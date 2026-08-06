@@ -1,3 +1,28 @@
+# The platform's publish law, TRANSLATED — not copied.
+#
+# The npm law (root CLAUDE.md, "The npm publish law") says: the version picks
+# the channel, the branch grants the right to use it, publishes are idempotent,
+# and a skip says so out loud. Every one of those intents applies here; not one
+# of the mechanisms does. This registry has no dist-tags, no semver
+# prereleases, no trusted publishing, and its trigger is a TAG rather than a
+# branch. So each intent gets its own local expression:
+#
+#   the version picks the channel  → the MINOR's parity. The Marketplace
+#                                    forbids semver prereleases (plain
+#                                    major.minor.patch only) and uses odd/even
+#                                    minor as its pre-release convention.
+#                                    Derived, never hand-picked.
+#   the branch grants the right    → the TAG grants it, so the tag and the
+#                                    manifest must agree. Asserted first.
+#   trusted publishing (no secret) → no equivalent exists. Nearest posture: the
+#                                    two PATs live in a `marketplace`
+#                                    environment whose deployment policy admits
+#                                    only `v*` tags, so no other ref can reach
+#                                    them.
+#   idempotent publishes           → query each registry for the version first.
+#   a skip says so                 → `::notice`, never silence.
+#   provenance attestations        → no equivalent. The artifact trail is the
+#                                    `.vsix` attached to the GitHub Release.
 name: Release
 
 on:
@@ -6,17 +31,139 @@ on:
       - "v*"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
+  # The same gate `ci.yml` runs on every branch, re-run against the tagged tree.
+  # A tag can point anywhere, so "development was green" is not a statement
+  # about this ref.
+  test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-
       - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec biome ci .
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm coverage
 
+  # The publish decision is its own job because `publish`'s `environment:` is
+  # evaluated before any step runs — it can only read another job's outputs.
+  # Same reason the npm law splits `version` out.
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.decide.outputs.version }}
+      channel: ${{ steps.decide.outputs.channel }}
+      flag: ${{ steps.decide.outputs.flag }}
+      extension: ${{ steps.decide.outputs.extension }}
+      vsix: ${{ steps.decide.outputs.vsix }}
+      marketplace: ${{ steps.decide.outputs.marketplace }}
+      openvsx: ${{ steps.decide.outputs.openvsx }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: decide
+        run: |
+          set -euo pipefail
+          VERSION=$(jq -r .version package.json)
+          PUBLISHER=$(jq -r .publisher package.json)
+          NAME=$(jq -r .name package.json)
+          # Two identifiers, and they are not interchangeable: the registries
+          # address an extension as `publisher.name`, while `vsce package`
+          # writes `name-version.vsix`.
+          EXTENSION="$PUBLISHER.$NAME"
+
+          # --- The tag grants the right, so the tag and the manifest must agree.
+          # One fact, previously stated twice with nothing comparing them:
+          # tagging v1.0.0 on a 0.2.10 tree published 0.2.10 under a v1.0.0
+          # GitHub Release. Fails before anything is packaged.
+          if [ "$GITHUB_REF_NAME" != "v$VERSION" ]; then
+            echo "::error title=Tag and manifest disagree::$GITHUB_REF_NAME was pushed, but package.json holds $VERSION. Tag v$VERSION, or bump the manifest to match the tag."
+            exit 1
+          fi
+
+          # --- The Marketplace accepts plain major.minor.patch only.
+          # A `-beta.1` version would be refused at the registry, deep into the
+          # run and with a message about neither the law nor the fix.
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=Unpublishable version::$VERSION is not plain major.minor.patch. The Marketplace forbids semver prereleases; the pre-release channel is the ODD MINOR (see the header of this file)."
+            exit 1
+          fi
+
+          # --- The VERSION picks the channel: odd minor → pre-release.
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          if [ $((MINOR % 2)) -eq 1 ]; then
+            CHANNEL=pre-release
+            FLAG=--pre-release
+          else
+            CHANNEL=stable
+            FLAG=
+          fi
+
+          echo "::notice title=Releasing::$EXTENSION $VERSION on the $CHANNEL channel (minor $MINOR)."
+
+          # --- Idempotence: a version already on a registry is a no-op there.
+          # An UNKNOWN answer means publish, never skip — a failed query must
+          # not silently cancel a release. Both probes therefore default to
+          # "not published" on any error.
+          MARKETPLACE=false
+          if curl -sf -X POST 'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery' \
+               -H 'Content-Type: application/json' \
+               -H 'Accept: application/json;api-version=3.0-preview.1' \
+               -d "{\"filters\":[{\"criteria\":[{\"filterType\":7,\"value\":\"$EXTENSION\"}]}],\"flags\":1}" \
+             | jq -e --arg v "$VERSION" \
+               '[.results[0].extensions[0].versions[]?.version] | index($v)' >/dev/null 2>&1; then
+            MARKETPLACE=true
+          fi
+
+          OPENVSX=false
+          if curl -sf -o /dev/null "https://open-vsx.org/api/$PUBLISHER/$NAME/$VERSION"; then
+            OPENVSX=true
+          fi
+
+          {
+            echo "version=$VERSION"
+            echo "channel=$CHANNEL"
+            echo "flag=$FLAG"
+            echo "extension=$EXTENSION"
+            echo "vsix=dist/$NAME-$VERSION.vsix"
+            echo "marketplace=$MARKETPLACE"
+            echo "openvsx=$OPENVSX"
+          } >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: [test, version]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The nearest thing this registry has to trusted publishing: the two PATs
+    # live ONLY in this environment, and its deployment policy admits only `v*`
+    # tags. A workflow on any other ref cannot reach a credential that is not
+    # there. (Repo-level secrets are reachable by any workflow without
+    # declaring an environment, which is what makes the scoping load-bearing
+    # rather than tidy.)
+    environment: marketplace
+    permissions:
+      contents: write
+    env:
+      # Job level, not step level, and that is a fix rather than a style
+      # choice: a step's `if:` cannot read that step's own `env:` block, so the
+      # previous `if: env.VSCE_PAT != ''` guards were evaluating against an
+      # unset value and skipping BOTH publishes on every run — a green release
+      # that published nothing, silently. Which is also why the skips below are
+      # notices.
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -24,30 +171,46 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm exec biome ci .
+      - run: pnpm build
 
-      - run: pnpm test --run
+      # The channel is baked into the package, so the artifact attached to the
+      # Release and the artifact published are the same bytes on the same
+      # channel — the flag is not re-decided at publish time.
+      - run: pnpm exec vsce package ${{ needs.version.outputs.flag }} --out dist/
 
-      - run: pnpm package
-        # produces dist/shipstatic-$VERSION.vsix
-
-      - id: vsix
-        run: echo "path=dist/shipstatic-$(jq -r .version package.json).vsix" >> "$GITHUB_OUTPUT"
-
+      # The artifact trail. There is no provenance attestation for this
+      # registry, so the `.vsix` on the Release is what a user can compare
+      # against what the Marketplace served them.
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          files: ${{ steps.vsix.outputs.path }}
+          files: ${{ needs.version.outputs.vsix }}
+          prerelease: ${{ needs.version.outputs.channel == 'pre-release' }}
           generate_release_notes: true
+          fail_on_unmatched_files: true
+
+      - name: Marketplace — already published
+        if: needs.version.outputs.marketplace == 'true'
+        run: echo "::notice title=Marketplace skipped::${{ needs.version.outputs.extension }} ${{ needs.version.outputs.version }} is already on the Visual Studio Marketplace. Re-running a published tag is a no-op."
+
+      - name: Marketplace — no credential
+        if: needs.version.outputs.marketplace != 'true' && env.VSCE_PAT == ''
+        run: echo "::notice title=Marketplace skipped::VSCE_PAT is not set on the 'marketplace' environment, so nothing was published to the Visual Studio Marketplace."
 
       - name: Publish to VS Code Marketplace
-        if: env.VSCE_PAT != ''
-        run: npx vsce publish --packagePath ${{ steps.vsix.outputs.path }}
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        if: needs.version.outputs.marketplace != 'true' && env.VSCE_PAT != ''
+        # The channel flag precedes `--packagePath`, which is VARIADIC — a trailing
+        # flag would be read as another package path on some parser versions.
+        run: pnpm exec vsce publish ${{ needs.version.outputs.flag }} --packagePath "${{ needs.version.outputs.vsix }}"
+
+      - name: Open VSX — already published
+        if: needs.version.outputs.openvsx == 'true'
+        run: echo "::notice title=Open VSX skipped::${{ needs.version.outputs.extension }} ${{ needs.version.outputs.version }} is already on Open VSX. Re-running a published tag is a no-op."
+
+      - name: Open VSX — no credential
+        if: needs.version.outputs.openvsx != 'true' && env.OVSX_PAT == ''
+        run: echo "::notice title=Open VSX skipped::OVSX_PAT is not set on the 'marketplace' environment, so nothing was published to Open VSX."
 
       - name: Publish to Open VSX
-        if: env.OVSX_PAT != ''
-        run: npx ovsx publish ${{ steps.vsix.outputs.path }} -p "$OVSX_PAT"
-        env:
-          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        if: needs.version.outputs.openvsx != 'true' && env.OVSX_PAT != ''
+        run: pnpm exec ovsx publish "${{ needs.version.outputs.vsix }}" ${{ needs.version.outputs.flag }} -p "$OVSX_PAT"

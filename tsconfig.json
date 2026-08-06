@@ -1,4 +1,19 @@
 {
+  // One config, covering `src` AND `tests`. This is what `pnpm typecheck`
+  // runs, and the pre-commit hook picks it up by name.
+  //
+  // Deviation from the platform sibling (`npm/ship`, `integrations/mcp`), and
+  // a deliberate one: those repos keep a build-shaped `tsconfig.json` that
+  // `tsc` emits from, so their check config has to be a second file. Nothing
+  // here is built by `tsc` — esbuild produces both bundles and reads no
+  // tsconfig — so a `tsconfig.check.json` would be a second file with nothing
+  // to differ about.
+  //
+  // Covering `tests` is the load-bearing half either way: vitest transpiles
+  // through esbuild WITHOUT typechecking, so until this include existed the
+  // test tree was unchecked. That is the gap that let the mocked SDK in
+  // `commands.test.ts` keep declaring `apiKey` and `validateApiKey` — names
+  // ship 2.0 does not export — while the suite stayed green.
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
@@ -10,9 +25,9 @@
     "forceConsistentCasingInFileNames": true,
     "lib": ["ES2022"],
     "allowSyntheticDefaultImports": true,
-    "rootDir": "./src",
-    "outDir": "./dist"
+    "resolveJsonModule": true,
+    "types": ["node", "vscode"]
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests"]
+  "include": ["src/**/*", "tests/**/*", "vitest.config.ts"],
+  "exclude": ["node_modules", "dist"]
 }

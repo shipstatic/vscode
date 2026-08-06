@@ -6,16 +6,24 @@
  */
 import { vi } from 'vitest';
 
+/** A command handler, as far as this mock cares — captured, then invoked. */
+export type CommandHandler = (...args: unknown[]) => unknown;
+
+/** The `withProgress` task: a thunk the real API awaits. */
+export type ProgressTask = () => unknown;
+
 // --- Classes ---
 
 export class EventEmitter<T = void> {
-  private listeners: Function[] = [];
-  event = (listener: Function) => {
+  private listeners: ((value: T) => void)[] = [];
+  event = (listener: (value: T) => void) => {
     this.listeners.push(listener);
     return { dispose: () => {} };
   };
-  fire = (...args: any[]) => {
-    for (const l of this.listeners) l(...args);
+  // `value` is optional so `fire()` reads naturally for the `void` payload the
+  // provider's change event carries — which is the only instantiation here.
+  fire = (value?: T) => {
+    for (const l of this.listeners) l(value as T);
   };
   dispose = vi.fn();
 }
@@ -66,12 +74,12 @@ export const window = {
   showInformationMessage: vi.fn(),
   showErrorMessage: vi.fn(),
   showOpenDialog: vi.fn(),
-  withProgress: vi.fn(async (_opts: any, task: Function) => task()),
+  withProgress: vi.fn(async (_opts: any, task: ProgressTask) => task()),
   createStatusBarItem: vi.fn(() => _statusBarItem),
 };
 
 export const commands = {
-  registerCommand: vi.fn((_id: string, _cb: Function) => ({ dispose: () => {} })),
+  registerCommand: vi.fn((_id: string, _cb: CommandHandler) => ({ dispose: () => {} })),
 };
 
 export const lm = {

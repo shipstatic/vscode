@@ -42,7 +42,7 @@ describe('mcp', () => {
       expect(servers[0]).toBeInstanceOf(McpStdioServerDefinition);
       expect(servers[0].label).toBe('ShipStatic');
       expect(servers[0].args[0]).toContain('mcp-server.js');
-      // Must NOT prompt for API key
+      // Must NOT prompt for a credential
       expect(window.showInputBox).not.toHaveBeenCalled();
     });
 
@@ -53,37 +53,75 @@ describe('mcp', () => {
   });
 
   describe('resolveMcpServerDefinition', () => {
-    it('sets SHIP_API_KEY env from SecretStorage', async () => {
-      await ctx.secrets.store('shipstatic.apiKey', 'ship-test123');
+    it('sets SHIP_TOKEN from SecretStorage', async () => {
+      await ctx.secrets.store('shipstatic.token', 'ship-test123');
       const server = new McpStdioServerDefinition('ShipStatic', 'node', []);
 
       const resolved = await provider.resolveMcpServerDefinition(server);
 
       expect(resolved).toBe(server);
-      expect(resolved.env.SHIP_API_KEY).toBe('ship-test123');
+      expect(resolved.env.SHIP_TOKEN).toBe('ship-test123');
     });
 
-    it('starts without API key when none stored', async () => {
+    it('forwards a deploy token through the same slot', async () => {
+      // The extension never classifies the credential — it carries whatever
+      // the user stored, and the server decides what it is.
+      await ctx.secrets.store('shipstatic.token', `deploy-${'b'.repeat(64)}`);
+      const server = new McpStdioServerDefinition('ShipStatic', 'node', []);
+
+      const resolved = await provider.resolveMcpServerDefinition(server);
+
+      expect(resolved.env.SHIP_TOKEN).toBe(`deploy-${'b'.repeat(64)}`);
+    });
+
+    it('starts without a token when none is stored', async () => {
       const server = new McpStdioServerDefinition('ShipStatic', 'node', []);
 
       const resolved = await provider.resolveMcpServerDefinition(server);
 
       expect(resolved).toBe(server);
-      expect(resolved.env.SHIP_API_KEY).toBeNull();
+      expect(resolved.env.SHIP_TOKEN).toBeNull();
       expect(window.showInputBox).not.toHaveBeenCalled();
     });
 
-    it('scrubs SHIP_* env vars to enforce SecretStorage as the sole credential source', async () => {
+    it('states the SDK’s whole env contract, so SecretStorage is the sole source', async () => {
       const server = new McpStdioServerDefinition('ShipStatic', 'node', []);
 
       const resolved = await provider.resolveMcpServerDefinition(server);
 
-      // Every SHIP_* var explicitly nulled — prevents shell-env leak into "anonymous" deploys.
+      // Exactly the two variables the SDK reads, both explicitly nulled: a
+      // credential exported for CLI use cannot authenticate an "anonymous"
+      // agent deploy, and an exported endpoint cannot redirect one. Exact
+      // equality is the fence — an SDK that grows a third variable must be
+      // met here, and a fourth null for something nothing reads is noise that
+      // reads like protection.
       expect(resolved.env).toEqual({
-        SHIP_API_KEY: null,
-        SHIP_DEPLOY_TOKEN: null,
+        SHIP_TOKEN: null,
         SHIP_API_URL: null,
       });
+    });
+
+    it('leaves a definition it did not provide untouched', async () => {
+      // This provider only ever provides stdio definitions, so the narrowing in
+      // `resolveMcpServerDefinition` states a guarantee rather than handling a
+      // case. Should VS Code ever hand back another kind, it comes back
+      // unmodified — never credentialed on the assumption it takes an env.
+      const foreign = { label: 'ShipStatic' } as any;
+
+      const resolved = await provider.resolveMcpServerDefinition(foreign);
+
+      expect(resolved).toBe(foreign);
+      expect(resolved.env).toBeUndefined();
+    });
+
+    it('no longer speaks the retired credential vocabulary', async () => {
+      const server = new McpStdioServerDefinition('ShipStatic', 'node', []);
+
+      const resolved = await provider.resolveMcpServerDefinition(server);
+
+      // SHIP_API_KEY / SHIP_DEPLOY_TOKEN are read by nothing since ship 2.0.
+      expect(resolved.env).not.toHaveProperty('SHIP_API_KEY');
+      expect(resolved.env).not.toHaveProperty('SHIP_DEPLOY_TOKEN');
     });
   });
 
