@@ -63,11 +63,21 @@ function assertFreshBundle(): void {
     throw new Error(`missing bundle — run \`pnpm build\` (expected ${BUNDLE})`);
   }
   const builtAt = statSync(BUNDLE).mtimeMs;
-  // `src/` and the bundler config are the two inputs that decide this file's
-  // contents; a pin change arrives through `pnpm install` + `pnpm build`.
+  // Every input that decides this file's contents: our source, the bundler
+  // config, and the resolved dependency graph.
+  //
+  // The lockfile is the one that is easy to leave out and the one that matters
+  // most. A `@shipstatic/mcp` bump without a rebuild is caught downstream
+  // anyway — the version assertion compares the running server against the
+  // installed manifest — but that is the ONLY pin it catches. Bump
+  // `@shipstatic/ship`, `@shipstatic/types` or the MCP SDK, skip the build, and
+  // every assertion below still passes against a bundle carrying the old
+  // dependency. Nothing else in this suite can see that, because nothing else
+  // runs the artifact.
   const sourcedAt = Math.max(
     newestMtimeMs(join(ROOT, 'src')),
     newestMtimeMs(join(ROOT, 'esbuild.mjs')),
+    newestMtimeMs(join(ROOT, 'pnpm-lock.yaml')),
   );
   if (sourcedAt > builtAt) {
     throw new Error(
