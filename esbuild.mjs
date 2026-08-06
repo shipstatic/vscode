@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import * as esbuild from 'esbuild';
+import { assertSingleCopy } from './scripts/single-copy.mjs';
 
 const require = createRequire(import.meta.url);
 const isWatch = process.argv.includes('--watch');
@@ -16,8 +17,12 @@ const shared = {
   platform: 'node',
   target: 'node20',
   format: 'cjs',
-  sourcemap: true,
+  // Dev builds only. The `.vscodeignore` allowlist ships the two bundles and
+  // no `.map`, so a packaged build with sourcemaps carries a
+  // `sourceMappingURL` pointing at a file that is not in the `.vsix`.
+  sourcemap: isWatch,
   minify: !isWatch,
+  metafile: true,
 };
 
 // 1. Extension entry point (runs in VS Code's extension host)
@@ -49,5 +54,10 @@ if (isWatch) {
   ]);
   await Promise.all([ctx1.watch(), ctx2.watch()]);
 } else {
-  await Promise.all([esbuild.build(extensionConfig), esbuild.build(mcpConfig)]);
+  const [extension, mcp] = await Promise.all([
+    esbuild.build(extensionConfig),
+    esbuild.build(mcpConfig),
+  ]);
+  assertSingleCopy('dist/extension.js', extension.metafile);
+  assertSingleCopy('dist/mcp-server.js', mcp.metafile);
 }

@@ -24,6 +24,7 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createServer } from '@shipstatic/mcp';
 import Ship from '@shipstatic/ship';
+import { DeploymentVia } from '@shipstatic/types';
 
 /**
  * The pinned `@shipstatic/mcp` version, substituted by esbuild's `define` from
@@ -39,7 +40,12 @@ async function main() {
   // optional: without it, deployments go to the public account and answer with
   // a claim URL. One slot, any platform token — the server classifies it.
   const ship = new Ship({ token: process.env.SHIP_TOKEN });
-  const server = createServer(ship, MCP_VERSION);
+  // `via` names the DISTRIBUTION SURFACE, not the protocol — the GitHub Action
+  // reports `git` whatever invoked the workflow. This server ships inside the
+  // extension's `.vsix`, so its deploys are the extension's; the palette's
+  // already said `vsc`, and until `@shipstatic/mcp@1.0.0-beta.8` the agent's
+  // could only say `mcp`, indistinguishable from an npx install elsewhere.
+  const server = createServer(ship, { version: MCP_VERSION, via: DeploymentVia.VSC });
   await server.connect(new StdioServerTransport());
 
   // stdout is the JSON-RPC channel, so the banner goes to stderr — where VS
