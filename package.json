@@ -40,6 +40,16 @@
     "ai",
     "agent"
   ],
+  "capabilities": {
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "Deploying reads files from disk."
+    },
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Deploying publishes the selected folder's contents to a public URL."
+    }
+  },
   "activationEvents": [
     "onStartupFinished"
   ],

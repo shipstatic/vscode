@@ -18,6 +18,9 @@ src/
 ├── commands.ts       # Command palette: deploy, setToken, whoami
 ├── status-bar.ts     # Deploy button in status bar
 └── mcp-entry.ts      # THE BUNDLED SERVER's entry — a child process, not the host
+
+scripts/
+└── single-copy.mjs   # the build's realm fence (one copy of the shared packages)
 ```
 
 **Two esbuild entry points, and since 1.0.0 both are OUR source:**
@@ -54,12 +57,25 @@ fail a build. It ships.**
 
 The fix was not better patches. `@shipstatic/mcp` now exports `createServer` —
 its `index.ts` records the widened rule, "what a second CONSUMER needs" — and
-this repo writes its own ~20-line entry point composing it with a
+this repo writes its own short entry point composing it with a
 `StdioServerTransport`. esbuild bundles a static import graph: no bin
 resolution, no shebang, no regex, and `serverInfo.version` is the pin's by
 construction, substituted by an esbuild `define` read from
 `@shipstatic/mcp/package.json` at build time (the version-from-pin law the
 hosted worker also uses).
+
+**It passes `via: 'vsc'`** (from `@shipstatic/mcp@1.0.0-beta.8`). `via` names
+the DISTRIBUTION SURFACE, not the protocol — the GitHub Action reports `git`
+whatever invoked the workflow. This server ships inside the `.vsix`, so its
+deploys are the extension's; the palette had always said `vsc` while agent-mode
+deploys said `mcp`, indistinguishable from an npx install in another client.
+
+**A `startStdio` absorbing the transport was proposed and rejected**, and
+`integrations/mcp/CLAUDE.md` records the measurement: the MCP SDK's
+`server/stdio.js` imports `node:process`, so exporting that composition from
+the package's library entry would put a Node builtin in the graph the
+Workers-hosted transport loads. It would need a second published entry point to
+be safe — more machinery than the five lines it deletes.
 
 Two consequences worth knowing:
 
@@ -67,7 +83,15 @@ Two consequences worth knowing:
   the mcp declares. The extension composes a stdio MCP server, so it depends on
   the MCP SDK — and matching ranges is what keeps pnpm resolving ONE copy, so
   esbuild bundles one module instance rather than handing `server.connect()` a
-  transport from a different realm.
+  transport from a different realm. **`scripts/single-copy.mjs` fences that on
+  every build**, from esbuild's own metafile, for the SDK plus
+  `@shipstatic/types`, `@shipstatic/ship` and `zod`. Two copies of types splits
+  the platform constants; two copies of ship splits `ShipError`, and
+  `isShipError` is deliberately STRUCTURAL rather than `instanceof`, so a split
+  realm degrades quietly instead of throwing — which is exactly why a fence
+  beats noticing. The check lives in `scripts/` rather than inside the bundler
+  config so `tests/single-copy.test.ts` can watch it FAIL; the build only ever
+  exercises the passing path.
 - **`tests/mcp-entry.test.ts` boots the built artifact** and asserts its
   identity and its catalogue. That fence is what makes the whole class
   impossible to reintroduce; it also refuses to run against a stale `dist/`,
@@ -76,7 +100,7 @@ Two consequences worth knowing:
 
 ### MCP Provider — The Core Feature
 
-The extension registers a `McpServerDefinitionProvider` via `vscode.lm.registerMcpServerDefinitionProvider()`. This is the VS Code 1.99+ API for auto-discovering MCP servers in agent mode.
+The extension registers a `McpServerDefinitionProvider` via `vscode.lm.registerMcpServerDefinitionProvider()` — the API for auto-discovering MCP servers in agent mode, finalized in **1.101**, which is why that is the engines floor (see Key Constraints).
 
 **Two-phase lifecycle (dictated by VS Code API contract):**
 
@@ -168,12 +192,13 @@ change cannot leave a sentence behind on the Marketplace.
 
 ```bash
 pnpm install        # Install dependencies
-pnpm build          # Build both entry points → dist/
+pnpm build          # Build both entry points → dist/ (runs the realm fence)
 pnpm test --run     # All tests (needs a current `pnpm build` — see below)
 pnpm typecheck      # tsc over src AND tests, 0 errors
 pnpm lint           # biome, 0 errors
 pnpm coverage       # the suite plus the ratchet — what CI runs
-pnpm watch          # Watch mode (no minification)
+pnpm test:host      # a REAL VS Code at the engines floor (~140MB, cached)
+pnpm watch          # Watch mode (no minification, sourcemaps on)
 pnpm package        # Build .vsix locally
 ```
 
@@ -187,9 +212,27 @@ tests/
 ├── commands.test.ts        # all 3 commands + SDK arg verification
 ├── extension.test.ts       # activation wiring + the migration's ORDERING
 ├── status-bar.test.ts      # item properties + disposal
+├── single-copy.test.ts     # the build's realm fence, watched FAILING
 ├── mcp-entry.test.ts       # fence: the BUILT bundle boots and is the pinned server
-└── docs-contract.test.ts   # fence: the published listing tracks the extension
+├── docs-contract.test.ts   # fence: the published listing tracks the extension
+└── host/                   # `pnpm test:host` — a real editor at the floor
+    ├── run.mjs             #   the launcher (downloads VS Code, derives the version)
+    └── suite.cjs           #   what runs INSIDE the extension host
 ```
+
+**Three tiers, and each says something the others cannot.**
+
+| Tier | Runs | Says |
+|---|---|---|
+| mock (`pnpm test`) | in-process, against `tests/vscode.mock.ts` | behaviour — every command, every branch |
+| artifact (`mcp-entry.test.ts`) | `dist/mcp-server.js` in a child process | the bundled server boots and is the pinned one |
+| host (`pnpm test:host`) | a real VS Code at `engines.vscode` | the editor loads and activates the built extension |
+
+The mock tier is fast and total; it is also a hand-written twin, and its
+members are now name-checked against `@types/vscode` (`satisfies Pick<…>` per
+namespace) so a rename or removal turns `pnpm typecheck` red. That is still a
+statement about the TYPES. Only the host tier has ever met an editor — which is
+why the engines defect survived for months with a green suite.
 
 The `vscode` module is not installable — it exists only inside the editor — so
 the vitest `alias` is not a convenience, it is the only thing that makes this
@@ -219,7 +262,9 @@ second file would have nothing to differ about.
 
 | Fence | Catches |
 |---|---|
-| `mcp-entry.test.ts` | The bundle not being a working server, or not being the pinned one. The whole F1 class above, plus a stale `dist/` certifying itself. |
+| `mcp-entry.test.ts` | The bundle not being a working server, or not being the pinned one. The whole class above, plus a stale `dist/` certifying itself — its freshness guard names `src/`, `esbuild.mjs` AND the lockfile, because a dependency bump without a rebuild is the same lie. |
+| `scripts/single-copy.mjs` (on build) | A split realm: two copies of `@shipstatic/types`, `@shipstatic/ship`, the MCP SDK or `zod` in a bundle. Silent by construction — `isShipError` is structural. |
+| `pnpm test:host` | The contract with the EDITOR: the extension not loading, `activate()` throwing at the engines floor, a contributed command that is never registered. Nothing else in the repo can see any of it, and nothing else loads the built `dist/extension.js`. |
 | `docs-contract.test.ts` | Drift between the Marketplace listing and the extension: a command title the manifest does not contribute, a tool count the bundled MCP does not serve, retired credential vocabulary, a duration that is not the derived expiry. |
 | `extension.test.ts` ordering assertion | The migration racing the provider registration — the one bug that would present as "my token stopped working in agent mode". |
 | `coverage.thresholds` | Coverage decay. 100 on statements/functions/lines; branches sits at 97 for one named arm (see `vitest.config.ts`). |
@@ -269,8 +314,12 @@ trigger. The header of that file holds the full mapping; the load-bearing parts:
   environment, which is what makes the scoping load-bearing rather than tidy.
   This repo establishes the pattern root `CLAUDE.md` records as the open
   follow-up for tag-released repos.
-- **No provenance equivalent.** The artifact trail is the `.vsix` attached to
-  the GitHub Release — a user can compare it against what the Marketplace served.
+- **Provenance has an equivalent after all** — it just is not npm's.
+  `actions/attest-build-provenance` signs the `.vsix` through GitHub's OIDC
+  identity, the same trust root `npm publish --provenance` uses, and a user
+  verifies with `gh attestation verify`. It runs BEFORE the Release upload, so
+  a Release can never carry an unattested artifact. The `.vsix` on the Release
+  is what the attestation is about.
 
 **`.vscodeignore` is an allowlist** (`**` then `!` the six files that ship). It
 was a denylist until 1.0.0 and a denylist only excludes what someone thought of;
@@ -306,6 +355,11 @@ git tag v1.0.0 && git push origin v1.0.0   # the whole release
 - **The bundled-MCP design is deliberate** — the server is frozen into the `.vsix` at build time, so this extension never resolves npm's `latest` at runtime. That is why it was exempt from the MCP `latest`-flip choreography, and why its release is its own. An extension that ran `npx` would resolve `latest` and break that choreography.
 - **No API-URL setting** — `contributes.configuration` is empty and published artifacts are prod-branded by law, so every installed copy talks to production. For dev verification, `SHIP_API_URL` in the Extension Development Host's launch environment reaches the SDK (the extension never ships it); the bundled MCP child cannot be redirected that way by design, so drive `dist/mcp-server.js` directly to verify it against another environment.
 - **All deps are devDependencies** — Everything is bundled by esbuild; no runtime `node_modules`
+- **Declared posture** — `capabilities` in the manifest refuses virtual
+  workspaces (deploying reads files from disk) and untrusted workspaces
+  (deploying publishes the selected folder to a public URL). Both were
+  undeclared defaults until 1.0.0, which meant VS Code assumed the permissive
+  answer to two questions nobody had asked.
 
 ---
 

@@ -21,8 +21,13 @@
 #                                    them.
 #   idempotent publishes           → query each registry for the version first.
 #   a skip says so                 → `::notice`, never silence.
-#   provenance attestations        → no equivalent. The artifact trail is the
-#                                    `.vsix` attached to the GitHub Release.
+#   provenance attestations        → `actions/attest-build-provenance` over the
+#                                    `.vsix`, verifiable with
+#                                    `gh attestation verify`. The npm law gets
+#                                    this from `npm publish --provenance`; the
+#                                    mechanism differs, the guarantee does not.
+#                                    The `.vsix` on the Release is what the
+#                                    attestation is ABOUT.
 name: Release
 
 on:
@@ -152,6 +157,11 @@ jobs:
     environment: marketplace
     permissions:
       contents: write
+      # The attestation is signed through GitHub's OIDC identity — the same
+      # trust root npm's `--provenance` uses, which is why this is a
+      # translation rather than a substitute.
+      id-token: write
+      attestations: write
     env:
       # Job level, not step level, and that is a fix rather than a style
       # choice: a step's `if:` cannot read that step's own `env:` block, so the
@@ -178,9 +188,15 @@ jobs:
       # channel — the flag is not re-decided at publish time.
       - run: pnpm exec vsce package ${{ needs.version.outputs.flag }} --out dist/
 
-      # The artifact trail. There is no provenance attestation for this
-      # registry, so the `.vsix` on the Release is what a user can compare
-      # against what the Marketplace served them.
+      # Signed provenance for the exact bytes that go to both registries and to
+      # the Release. Before the upload, so a Release can never carry an
+      # unattested artifact.
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: ${{ needs.version.outputs.vsix }}
+
+      # The artifact trail: the `.vsix` a user can compare against what the
+      # Marketplace served them, now with an attestation to check it against.
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
