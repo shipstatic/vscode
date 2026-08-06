@@ -26,6 +26,10 @@
     "lib": ["ES2022"],
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
+    // `scripts/single-copy.mjs` is build tooling in plain JS; its test imports
+    // it, and without this the import would need a `@ts-expect-error` that
+    // suppresses signature checking along with the resolution error.
+    "allowJs": true,
     "types": ["node", "vscode"]
   },
   "include": ["src/**/*", "tests/**/*", "vitest.config.ts"],

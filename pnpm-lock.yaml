@@ -15,8 +15,8 @@ importers:
         specifier: ^1.30.0
         version: 1.30.0(zod@4.4.3)
       '@shipstatic/mcp':
-        specifier: 1.0.0-beta.7
-        version: 1.0.0-beta.7
+        specifier: 1.0.0-beta.8
+        version: 1.0.0-beta.8
       '@shipstatic/ship':
         specifier: 2.0.0-beta.15
         version: 2.0.0-beta.15
@@ -805,8 +805,8 @@ packages:
     resolution: {integrity: sha512-Nqc90v4lWCXyakD6xNyNACBJNJ0tNCwj2WNk/7ivyacYHxiITVgmLUFXTBOeCdy79iz6HtN9Y31uw/jbLrdOAg==}
     engines: {node: '>=20.0.0'}
 
-  '@shipstatic/mcp@1.0.0-beta.7':
-    resolution: {integrity: sha512-VsFCJ68Gf18jU49QTTGMpzdGQKOVYG5tAltBOePFYxow439ePzRQOJmlb3nAH+ElIyqarQkhujj9j2Q/TDs4yg==}
+  '@shipstatic/mcp@1.0.0-beta.8':
+    resolution: {integrity: sha512-M3GqmGf0futkh/O0VxnzKgTWvPwvwmMZuK5FsdrZnuxxErNeqNwn4vgtQPwIFiraUYP+305g4E6VhjIZiVFmUQ==}
     engines: {node: '>=20.0.0'}
     hasBin: true
 
@@ -3001,7 +3001,7 @@ snapshots:
 
   '@secretlint/types@10.2.2': {}
 
-  '@shipstatic/mcp@1.0.0-beta.7':
+  '@shipstatic/mcp@1.0.0-beta.8':
     dependencies:
       '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
       '@shipstatic/ship': 2.0.0-beta.15
