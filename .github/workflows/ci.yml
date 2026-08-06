@@ -47,6 +47,21 @@ jobs:
 
       - run: pnpm coverage
 
+      # The editor is ~140MB and versioned by `engines.vscode`, so the key is
+      # the manifest itself: a floor bump invalidates the cache, which is
+      # exactly when a different editor must be downloaded.
+      - uses: actions/cache@v4
+        with:
+          path: .vscode-test
+          key: vscode-test-${{ runner.os }}-${{ hashFiles('package.json') }}
+
+      # The HOST tier: a real VS Code at the engines floor, running the built
+      # extension. It is the only step that can observe the contract with the
+      # editor — `engines.vscode` claimed `^1.99.0` against an API that does not
+      # exist below 1.101, and no mock could ever have seen it. Linux needs a
+      # display; `xvfb-run` provides one.
+      - run: xvfb-run -a pnpm test:host
+
       # Activates once the SLACK_WEBHOOK_URL secret is set on this repo.
       - if: failure() && env.SLACK_WEBHOOK_URL != ''
         uses: slackapi/slack-github-action@v4
