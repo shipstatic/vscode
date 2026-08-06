@@ -41,7 +41,10 @@ export default defineConfig({
        * in-process blind corner, so a command that arrives without a test
        * fails the run.
        *
-       * BRANCHES is 97 for exactly one arm, named rather than rounded away.
+       * BRANCHES is 98 for exactly one arm, named rather than rounded away.
+       * (It was 97 until the hot-path wave added covered branches; a ratchet
+       * that is not raised when coverage rises is a floor the gains erode back
+       * through.)
        * `auth.ts`'s `validateInput` ends `error instanceof Error ? … : …`, and
        * the else cannot be reached through the real collaborator —
        * `validateToken` throws `ShipError` on every path, and `ShipError` is
@@ -57,7 +60,7 @@ export default defineConfig({
        */
       thresholds: {
         statements: 100,
-        branches: 97,
+        branches: 98,
         functions: 100,
         lines: 100,
         'src/auth.ts': {

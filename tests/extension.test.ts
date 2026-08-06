@@ -39,6 +39,7 @@ describe('activate', () => {
     const registered = commands.registerCommand.mock.calls.map((c: any[]) => c[0]);
     expect(registered.sort()).toEqual([
       'shipstatic.deploy',
+      'shipstatic.deployWithPassword',
       'shipstatic.setToken',
       'shipstatic.whoami',
     ]);
@@ -54,8 +55,8 @@ describe('activate', () => {
   it('registers everything as a disposable', async () => {
     await activate(ctx);
 
-    // Provider + emitter + three commands + status bar item.
-    expect(ctx.subscriptions.length).toBe(6);
+    // Provider + emitter + four commands + status bar item.
+    expect(ctx.subscriptions.length).toBe(7);
   });
 
   describe('the 0.2.x secret migration', () => {

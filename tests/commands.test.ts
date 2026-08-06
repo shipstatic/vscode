@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import Ship from '@shipstatic/ship';
+import { ShipError } from '@shipstatic/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerCommands } from '../src/commands';
 import {
@@ -11,8 +14,8 @@ import {
 
 // The SDK is the one collaborator worth faking here: every command is a thin
 // delegation to it. `@shipstatic/types` is deliberately NOT mocked — its
-// constants and validators are pure values, and asserting against a fake copy
-// of them would assert against this file's own data.
+// constants, validators and `ShipError` are pure values, and asserting against
+// a fake copy of them would assert against this file's own data.
 vi.mock('@shipstatic/ship', () => ({
   // A function expression, not an arrow: `commands.ts` calls `new Ship(...)`,
   // and an arrow has no [[Construct]] — vitest 4 refuses to construct one and
@@ -36,10 +39,12 @@ vi.mock('@shipstatic/ship', () => ({
   }),
 }));
 
-// Get the mock Ship constructor for per-test control
-import Ship from '@shipstatic/ship';
+// The folder picker asks the filesystem what exists. Everything is present by
+// default; individual cases turn paths off.
+vi.mock('node:fs', () => ({ existsSync: vi.fn(() => true) }));
 
 const MockShip = vi.mocked(Ship);
+const mockExistsSync = vi.mocked(existsSync);
 
 /** A constructible stub returning `instance` — see the note in `vi.mock` above. */
 function shipReturning(instance: unknown) {
@@ -52,18 +57,40 @@ function shipReturning(instance: unknown) {
 /** 69 chars — the validator in `setToken` is real, so prompts need real input. */
 const API_KEY = `ship-${'a'.repeat(64)}`;
 const KEY = 'shipstatic.token';
+const LAST_PATH = 'shipstatic.lastDeployPath';
+
+const DEPLOYED = {
+  deployment: 'happy-cat-abc1234.shipstatic.com',
+  url: 'https://happy-cat-abc1234.shipstatic.com',
+};
+const CLAIMABLE = { ...DEPLOYED, claim: 'https://my.shipstatic.com/claim/abc123' };
 
 describe('commands', () => {
   let ctx: ReturnType<typeof createMockContext>;
   let handlers: Map<string, CommandHandler>;
 
+  /** Choose the offered folder whose label matches, the way a user would. */
+  function chooseFolder(label: string) {
+    window.showQuickPick.mockImplementationOnce(async (items: { label: string }[]) => {
+      const match = items.find((i) => i.label === label);
+      if (!match) {
+        throw new Error(`no folder named "${label}" — offered: ${items.map((i) => i.label)}`);
+      }
+      return match;
+    });
+  }
+
+  /** The labels the picker offered, in order. */
+  const offered = () =>
+    window.showQuickPick.mock.calls[0][0].map((i: { label: string }) => i.label);
+
   beforeEach(() => {
     ctx = createMockContext();
     handlers = new Map();
-    workspace.workspaceFolders = undefined;
+    workspace.workspaceFolders = [{ uri: { fsPath: '/test' }, name: 'test' }] as never;
     vi.clearAllMocks();
+    mockExistsSync.mockReturnValue(true);
 
-    // Capture command handlers
     commands.registerCommand.mockImplementation((id: string, cb: CommandHandler) => {
       handlers.set(id, cb);
       return { dispose: () => {} };
@@ -72,16 +99,18 @@ describe('commands', () => {
     registerCommands(ctx);
   });
 
-  it('registers all 3 commands', () => {
-    expect(handlers.has('shipstatic.setToken')).toBe(true);
-    expect(handlers.has('shipstatic.deploy')).toBe(true);
-    expect(handlers.has('shipstatic.whoami')).toBe(true);
+  it('registers every contributed command', () => {
+    expect([...handlers.keys()].sort()).toEqual([
+      'shipstatic.deploy',
+      'shipstatic.deployWithPassword',
+      'shipstatic.setToken',
+      'shipstatic.whoami',
+    ]);
   });
 
   describe('setToken', () => {
     it('stores the token and fires the MCP change event', async () => {
       window.showInputBox.mockResolvedValueOnce(API_KEY);
-
       const { onDidChangeMcpServers } = await import('../src/mcp');
       const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
 
@@ -93,7 +122,6 @@ describe('commands', () => {
 
     it('does not fire the MCP change event when the user cancels', async () => {
       window.showInputBox.mockResolvedValueOnce(undefined);
-
       const { onDidChangeMcpServers } = await import('../src/mcp');
       const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
 
@@ -111,87 +139,163 @@ describe('commands', () => {
     });
   });
 
-  describe('deploy', () => {
-    it('shows error when no workspace folders', async () => {
+  describe('the folder picker', () => {
+    it('shows an error and asks nothing when no folder is open', async () => {
+      workspace.workspaceFolders = undefined;
+
       await handlers.get('shipstatic.deploy')!();
 
       expect(window.showErrorMessage).toHaveBeenCalledWith(
         expect.stringContaining('Open a folder'),
       );
+      expect(window.showQuickPick).not.toHaveBeenCalled();
     });
 
-    it('returns early when user cancels folder picker', async () => {
-      workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
+    it('offers build output, the workspace root, and a Browse escape', async () => {
+      window.showQuickPick.mockResolvedValueOnce(undefined);
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(offered()).toEqual(['dist', 'build', 'out', 'public', '_site', '/test', 'Browse…']);
+    });
+
+    it('puts the remembered folder first, so a repeat deploy is one keypress', async () => {
+      ctx.workspaceState.get.mockReturnValueOnce('/test/dist');
+      window.showQuickPick.mockResolvedValueOnce(undefined);
+
+      await handlers.get('shipstatic.deploy')!();
+
+      const items = window.showQuickPick.mock.calls[0][0];
+      expect(items[0]).toMatchObject({ label: '/test/dist', description: 'Last deployed' });
+      // …and it is not offered a second time further down as build output.
+      expect(items.filter((i: { path?: string }) => i.path === '/test/dist')).toHaveLength(1);
+    });
+
+    it('drops a remembered folder that no longer exists', async () => {
+      // A build directory can be cleaned between sessions. A stale default
+      // would fail the DEPLOY instead of the pick — the worse place to learn.
+      ctx.workspaceState.get.mockReturnValueOnce('/test/gone');
+      mockExistsSync.mockImplementation((p) => p !== '/test/gone');
+      window.showQuickPick.mockResolvedValueOnce(undefined);
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(offered()).not.toContain('/test/gone');
+    });
+
+    it('only offers folders that exist', async () => {
+      mockExistsSync.mockImplementation((p) => p === '/test/dist' || p === '/test');
+      window.showQuickPick.mockResolvedValueOnce(undefined);
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(offered()).toEqual(['dist', '/test', 'Browse…']);
+    });
+
+    it('prefixes each root when the workspace has more than one', async () => {
+      workspace.workspaceFolders = [
+        { uri: { fsPath: '/a' }, name: 'site' },
+        { uri: { fsPath: '/b' }, name: 'docs' },
+      ] as never;
+      mockExistsSync.mockImplementation((p) => p === '/a/dist' || p === '/b/dist');
+      window.showQuickPick.mockResolvedValueOnce(undefined);
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(offered()).toEqual(['site/dist', 'docs/dist', 'Browse…']);
+    });
+
+    it('falls back to the native dialog on Browse…', async () => {
+      chooseFolder('Browse…');
+      window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/elsewhere/site' }]);
+      window.showInformationMessage.mockResolvedValueOnce(undefined);
+      const upload = vi.fn().mockResolvedValue(DEPLOYED);
+      MockShip.mockImplementationOnce(shipReturning({ deployments: { upload } }));
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(upload).toHaveBeenCalledWith('/elsewhere/site', { via: 'vsc' });
+    });
+
+    it('returns early when the picker is dismissed', async () => {
+      window.showQuickPick.mockResolvedValueOnce(undefined);
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(MockShip).not.toHaveBeenCalled();
+    });
+
+    it('returns early when the native dialog is dismissed', async () => {
+      chooseFolder('Browse…');
       window.showOpenDialog.mockResolvedValueOnce(undefined);
 
       await handlers.get('shipstatic.deploy')!();
 
       expect(MockShip).not.toHaveBeenCalled();
     });
+  });
 
-    it('returns early when user cancels password prompt', async () => {
-      workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
-      window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
-      window.showInputBox.mockResolvedValueOnce(undefined);
-
-      await handlers.get('shipstatic.deploy')!();
-
-      expect(MockShip).not.toHaveBeenCalled();
-    });
-
-    it('deploys with correct SDK args and shows URL', async () => {
+  describe('deploy', () => {
+    it('deploys the picked folder and shows the URL', async () => {
       await ctx.secrets.store(KEY, API_KEY);
-      workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
-      window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
-      window.showInputBox.mockResolvedValueOnce('');
+      chooseFolder('dist');
       window.showInformationMessage.mockResolvedValueOnce('Copy URL');
-
-      const mockUpload = vi.fn().mockResolvedValue({
-        deployment: 'happy-cat-abc1234.shipstatic.com',
-        url: 'https://happy-cat-abc1234.shipstatic.com',
-      });
-      MockShip.mockImplementationOnce(shipReturning({ deployments: { upload: mockUpload } }));
+      const upload = vi.fn().mockResolvedValue(DEPLOYED);
+      MockShip.mockImplementationOnce(shipReturning({ deployments: { upload } }));
 
       await handlers.get('shipstatic.deploy')!();
 
       // One slot: the stored credential rides the `token` option, whatever it is.
       expect(MockShip).toHaveBeenCalledWith({ token: API_KEY });
-      // Verify upload is called with selected path and via tracking (no password)
-      expect(mockUpload).toHaveBeenCalledWith('/test/dist', { via: 'vsc' });
-      // Verify URL shown to user — uses canonical result.url, not reconstructed
+      expect(upload).toHaveBeenCalledWith('/test/dist', { via: 'vsc' });
       expect(window.showInformationMessage).toHaveBeenCalledWith(
         'Deployed to https://happy-cat-abc1234.shipstatic.com',
         'Open in Browser',
         'Copy URL',
       );
-      expect(env.clipboard.writeText).toHaveBeenCalledWith(
-        'https://happy-cat-abc1234.shipstatic.com',
-      );
+      expect(env.clipboard.writeText).toHaveBeenCalledWith(DEPLOYED.url);
     });
 
-    it('forwards password to the SDK when user provides one', async () => {
-      await ctx.secrets.store(KEY, API_KEY);
-      workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
-      window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
-      window.showInputBox.mockResolvedValueOnce('hunter2!');
+    it('never prompts for a password', async () => {
+      // The whole point of the sibling command: the common path pays nothing
+      // for a feature most deploys do not use.
+      chooseFolder('dist');
       window.showInformationMessage.mockResolvedValueOnce(undefined);
-
-      const mockUpload = vi.fn().mockResolvedValue({
-        deployment: 'happy-cat-abc1234.shipstatic.com',
-        url: 'https://happy-cat-abc1234.shipstatic.com',
-      });
-      MockShip.mockImplementationOnce(shipReturning({ deployments: { upload: mockUpload } }));
+      const upload = vi.fn().mockResolvedValue(DEPLOYED);
+      MockShip.mockImplementationOnce(shipReturning({ deployments: { upload } }));
 
       await handlers.get('shipstatic.deploy')!();
 
-      expect(mockUpload).toHaveBeenCalledWith('/test/dist', { via: 'vsc', password: 'hunter2!' });
+      expect(window.showInputBox).not.toHaveBeenCalled();
+      expect(upload).toHaveBeenCalledWith('/test/dist', { via: 'vsc' });
     });
 
-    it('opens browser when user selects "Open in Browser"', async () => {
-      await ctx.secrets.store(KEY, API_KEY);
-      workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
-      window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
-      window.showInputBox.mockResolvedValueOnce('');
+    it('remembers the folder after the deploy succeeded', async () => {
+      chooseFolder('dist');
+      window.showInformationMessage.mockResolvedValueOnce(undefined);
+      MockShip.mockImplementationOnce(
+        shipReturning({ deployments: { upload: vi.fn().mockResolvedValue(DEPLOYED) } }),
+      );
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(ctx.workspaceState.update).toHaveBeenCalledWith(LAST_PATH, '/test/dist');
+    });
+
+    it('does not remember a folder whose deploy failed', async () => {
+      // Remembering the mistake would make the next deploy default to it.
+      chooseFolder('dist');
+      MockShip.mockImplementationOnce(
+        shipReturning({ deployments: { upload: vi.fn().mockRejectedValue(new Error('nope')) } }),
+      );
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(ctx.workspaceState.update).not.toHaveBeenCalled();
+    });
+
+    it('opens the browser when the user selects "Open in Browser"', async () => {
+      chooseFolder('dist');
       window.showInformationMessage.mockResolvedValueOnce('Open in Browser');
 
       await handlers.get('shipstatic.deploy')!();
@@ -200,17 +304,11 @@ describe('commands', () => {
     });
 
     it('deploys anonymously with no token and shows the claim expiry', async () => {
-      workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
-      window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
-      window.showInputBox.mockResolvedValueOnce('');
+      chooseFolder('dist');
       window.showInformationMessage.mockResolvedValueOnce(undefined);
-
-      const mockUpload = vi.fn().mockResolvedValue({
-        deployment: 'happy-cat-abc1234.shipstatic.com',
-        url: 'https://happy-cat-abc1234.shipstatic.com',
-        claim: 'https://my.shipstatic.com/claim/abc123',
-      });
-      MockShip.mockImplementationOnce(shipReturning({ deployments: { upload: mockUpload } }));
+      MockShip.mockImplementationOnce(
+        shipReturning({ deployments: { upload: vi.fn().mockResolvedValue(CLAIMABLE) } }),
+      );
 
       await handlers.get('shipstatic.deploy')!();
 
@@ -227,20 +325,12 @@ describe('commands', () => {
     });
 
     it('offers Set Token from the claimable deploy notification', async () => {
-      workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
-      window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
-      window.showInputBox
-        .mockResolvedValueOnce('') // password prompt
-        .mockResolvedValueOnce(API_KEY); // Set Token prompt
+      chooseFolder('dist');
       window.showInformationMessage.mockResolvedValueOnce('Set Token');
-
-      const mockUpload = vi.fn().mockResolvedValue({
-        deployment: 'happy-cat-abc1234.shipstatic.com',
-        url: 'https://happy-cat-abc1234.shipstatic.com',
-        claim: 'https://my.shipstatic.com/claim/abc123',
-      });
-      MockShip.mockImplementationOnce(shipReturning({ deployments: { upload: mockUpload } }));
-
+      window.showInputBox.mockResolvedValueOnce(API_KEY);
+      MockShip.mockImplementationOnce(
+        shipReturning({ deployments: { upload: vi.fn().mockResolvedValue(CLAIMABLE) } }),
+      );
       const { onDidChangeMcpServers } = await import('../src/mcp');
       const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
 
@@ -250,21 +340,13 @@ describe('commands', () => {
       expect(fireSpy).toHaveBeenCalled();
     });
 
-    it('does not fire MCP event when Set Token is cancelled', async () => {
-      workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
-      window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
-      window.showInputBox
-        .mockResolvedValueOnce('') // password prompt
-        .mockResolvedValueOnce(undefined); // Set Token cancelled
+    it('does not fire the MCP event when Set Token is cancelled', async () => {
+      chooseFolder('dist');
       window.showInformationMessage.mockResolvedValueOnce('Set Token');
-
-      const mockUpload = vi.fn().mockResolvedValue({
-        deployment: 'happy-cat-abc1234.shipstatic.com',
-        url: 'https://happy-cat-abc1234.shipstatic.com',
-        claim: 'https://my.shipstatic.com/claim/abc123',
-      });
-      MockShip.mockImplementationOnce(shipReturning({ deployments: { upload: mockUpload } }));
-
+      window.showInputBox.mockResolvedValueOnce(undefined);
+      MockShip.mockImplementationOnce(
+        shipReturning({ deployments: { upload: vi.fn().mockResolvedValue(CLAIMABLE) } }),
+      );
       const { onDidChangeMcpServers } = await import('../src/mcp');
       const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
 
@@ -273,11 +355,8 @@ describe('commands', () => {
       expect(fireSpy).not.toHaveBeenCalled();
     });
 
-    it('shows error on deployment failure', async () => {
-      workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
-      window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
-      window.showInputBox.mockResolvedValueOnce('');
-
+    it('shows an error on deployment failure', async () => {
+      chooseFolder('dist');
       MockShip.mockImplementationOnce(
         shipReturning({
           deployments: { upload: vi.fn().mockRejectedValue(new Error('Upload failed')) },
@@ -292,10 +371,7 @@ describe('commands', () => {
     it('falls back to its own sentence when what was thrown is not an Error', async () => {
       // JavaScript lets anything be thrown, and a rejection carrying a bare
       // string would otherwise reach the user as "ShipStatic: undefined".
-      workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
-      window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
-      window.showInputBox.mockResolvedValueOnce('');
-
+      chooseFolder('dist');
       MockShip.mockImplementationOnce(
         shipReturning({ deployments: { upload: vi.fn().mockRejectedValue('nope') } }),
       );
@@ -303,6 +379,126 @@ describe('commands', () => {
       await handlers.get('shipstatic.deploy')!();
 
       expect(window.showErrorMessage).toHaveBeenCalledWith('ShipStatic: Deployment failed');
+    });
+  });
+
+  describe('deployWithPassword', () => {
+    it('prompts once and forwards the password to the SDK', async () => {
+      chooseFolder('dist');
+      window.showInputBox.mockResolvedValueOnce('hunter22');
+      window.showInformationMessage.mockResolvedValueOnce(undefined);
+      const upload = vi.fn().mockResolvedValue(DEPLOYED);
+      MockShip.mockImplementationOnce(shipReturning({ deployments: { upload } }));
+
+      await handlers.get('shipstatic.deployWithPassword')!();
+
+      expect(upload).toHaveBeenCalledWith('/test/dist', { via: 'vsc', password: 'hunter22' });
+    });
+
+    it('states the platform’s own length rule in the prompt', async () => {
+      chooseFolder('dist');
+      window.showInputBox.mockResolvedValueOnce(undefined);
+
+      await handlers.get('shipstatic.deployWithPassword')!();
+
+      expect(window.showInputBox.mock.calls[0][0].prompt).toContain('6–128');
+    });
+
+    it('deploys nothing when the password prompt is cancelled', async () => {
+      chooseFolder('dist');
+      window.showInputBox.mockResolvedValueOnce(undefined);
+
+      await handlers.get('shipstatic.deployWithPassword')!();
+
+      expect(MockShip).not.toHaveBeenCalled();
+    });
+
+    it('deploys nothing when the password is left empty', async () => {
+      // This command exists to set one. An empty value is a cancelled intent,
+      // not a request for an unprotected deploy — that is what `Deploy` is.
+      chooseFolder('dist');
+      window.showInputBox.mockResolvedValueOnce('');
+
+      await handlers.get('shipstatic.deployWithPassword')!();
+
+      expect(MockShip).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('an authentication failure offers the fix, not just the sentence', () => {
+    it('offers Set Token when the platform rejects the credential', async () => {
+      // Keyed on the TYPED error, never the message — the platform's own rule
+      // for every other client. The claim flow already offered this on
+      // anonymous SUCCESS; a present-but-rejected token was the one path that
+      // knew exactly what was wrong and made the user go find the command.
+      await ctx.secrets.store(KEY, API_KEY);
+      chooseFolder('dist');
+      window.showErrorMessage.mockResolvedValueOnce('Set Token');
+      window.showInputBox.mockResolvedValueOnce(API_KEY);
+      MockShip.mockImplementationOnce(
+        shipReturning({
+          deployments: {
+            upload: vi.fn().mockRejectedValue(ShipError.authentication('Invalid API key')),
+          },
+        }),
+      );
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(window.showErrorMessage).toHaveBeenCalledWith(
+        'ShipStatic: Invalid API key',
+        'Set Token',
+      );
+      expect(ctx.secrets.store).toHaveBeenCalledWith(KEY, API_KEY);
+    });
+
+    it('offers nothing extra for a failure the editor cannot fix', async () => {
+      chooseFolder('dist');
+      MockShip.mockImplementationOnce(
+        shipReturning({
+          deployments: {
+            upload: vi.fn().mockRejectedValue(ShipError.network('Connection refused')),
+          },
+        }),
+      );
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(window.showErrorMessage).toHaveBeenCalledWith('ShipStatic: Connection refused');
+    });
+
+    it('reaches whoami too', async () => {
+      await ctx.secrets.store(KEY, API_KEY);
+      window.showErrorMessage.mockResolvedValueOnce(undefined);
+      MockShip.mockImplementationOnce(
+        shipReturning({
+          whoami: vi.fn().mockRejectedValue(ShipError.authentication('Token expired')),
+        }),
+      );
+
+      await handlers.get('shipstatic.whoami')!();
+
+      expect(window.showErrorMessage).toHaveBeenCalledWith(
+        'ShipStatic: Token expired',
+        'Set Token',
+      );
+    });
+
+    it('does not prompt when the user dismisses the offer', async () => {
+      await ctx.secrets.store(KEY, API_KEY);
+      chooseFolder('dist');
+      window.showErrorMessage.mockResolvedValueOnce(undefined);
+      MockShip.mockImplementationOnce(
+        shipReturning({
+          deployments: {
+            upload: vi.fn().mockRejectedValue(ShipError.authentication('Invalid API key')),
+          },
+        }),
+      );
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(window.showInputBox).not.toHaveBeenCalled();
     });
   });
 
@@ -351,27 +547,13 @@ describe('commands', () => {
 
       await handlers.get('shipstatic.whoami')!();
 
-      // Default mock returns customDomains: 0
       expect(window.showInformationMessage).toHaveBeenCalledWith(
         'ShipStatic: test@example.com (free) · 0 custom domains',
       );
     });
 
-    it('shows error on failure', async () => {
-      await ctx.secrets.store(KEY, API_KEY);
-
-      MockShip.mockImplementationOnce(
-        shipReturning({ whoami: vi.fn().mockRejectedValue(new Error('Unauthorized')) }),
-      );
-
-      await handlers.get('shipstatic.whoami')!();
-
-      expect(window.showErrorMessage).toHaveBeenCalledWith('ShipStatic: Unauthorized');
-    });
-
     it('falls back to its own sentence when what was thrown is not an Error', async () => {
       await ctx.secrets.store(KEY, API_KEY);
-
       MockShip.mockImplementationOnce(shipReturning({ whoami: vi.fn().mockRejectedValue('nope') }));
 
       await handlers.get('shipstatic.whoami')!();
@@ -381,9 +563,8 @@ describe('commands', () => {
       );
     });
 
-    it('fires MCP change event when a token is entered', async () => {
+    it('fires the MCP change event when a token is entered', async () => {
       window.showInputBox.mockResolvedValueOnce(API_KEY);
-
       const { onDidChangeMcpServers } = await import('../src/mcp');
       const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
 
@@ -391,14 +572,10 @@ describe('commands', () => {
 
       expect(ctx.secrets.store).toHaveBeenCalledWith(KEY, API_KEY);
       expect(fireSpy).toHaveBeenCalled();
-      expect(window.showInformationMessage).toHaveBeenCalledWith(
-        'ShipStatic: test@example.com (free) · 0 custom domains',
-      );
     });
 
-    it('does not fire MCP event when a token is already stored', async () => {
+    it('does not fire the MCP event when a token is already stored', async () => {
       await ctx.secrets.store(KEY, API_KEY);
-
       const { onDidChangeMcpServers } = await import('../src/mcp');
       const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
 
