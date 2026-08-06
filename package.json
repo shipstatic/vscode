@@ -2,7 +2,7 @@
   "name": "shipstatic",
   "displayName": "ShipStatic",
   "description": "Free, no account needed — deploy static websites, landing pages, and prototypes instantly from chat or the command palette",
-  "version": "0.2.10",
+  "version": "1.0.0",
   "publisher": "shipstatic",
   "icon": "icon.png",
   "license": "MIT",
@@ -53,8 +53,8 @@
     ],
     "commands": [
       {
-        "command": "shipstatic.setApiKey",
-        "title": "ShipStatic: Set API Key"
+        "command": "shipstatic.setToken",
+        "title": "ShipStatic: Set Token"
       },
       {
         "command": "shipstatic.deploy",
@@ -71,6 +71,8 @@
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "test": "vitest",
+    "coverage": "vitest --run --coverage",
+    "typecheck": "tsc --noEmit",
     "package": "vsce package --out dist/",
     "publish": "vsce publish",
     "prepare": "git config core.hooksPath scripts/githooks",
@@ -79,12 +81,17 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.5",
-    "@shipstatic/mcp": "^0.4.8",
-    "@shipstatic/ship": "^0.9.6",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@shipstatic/mcp": "1.0.0-beta.7",
+    "@shipstatic/ship": "2.0.0-beta.15",
+    "@shipstatic/types": "2.5.0-beta.20",
+    "@types/node": "^20.19.43",
     "@types/vscode": "^1.99.0",
+    "@vitest/coverage-v8": "4.1.10",
     "@vscode/vsce": "^3.0.0",
     "esbuild": "^0.25.0",
+    "ovsx": "^0.10.0",
     "typescript": "^5.9.0",
-    "vitest": "^3.2.0"
+    "vitest": "4.1.10"
   }
 }

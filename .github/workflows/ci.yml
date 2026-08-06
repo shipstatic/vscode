@@ -1,0 +1,57 @@
+# Tests-only by doctrine: releases here are TAG-driven (`release.yml`), so
+# there is no environment dimension to flip and this file is identical on both
+# branches. Pushing `development` publishes nothing.
+#
+# It exists because until 1.0.0 the tag workflow was the only automated gate on
+# this repo — a broken commit on `development` was discovered at release time,
+# which is the worst moment to discover one. The pre-commit hook is a fast gate
+# (credential scan, lint, typecheck); suites live in CI, never in hooks.
+name: CI
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main, development]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # No `version:` — pnpm/action-setup reads the `packageManager` field,
+      # so the pnpm pin lives in exactly one place.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm exec biome ci .
+
+      - run: pnpm typecheck
+
+      # BEFORE the suite, not after: `tests/mcp-entry.test.ts` executes
+      # `dist/mcp-server.js` and refuses to run against a stale or missing
+      # build, so an unbuilt tree fails the suite rather than skipping the one
+      # fence that proves the bundled server starts at all.
+      - run: pnpm build
+
+      - run: pnpm coverage
+
+      # Activates once the SLACK_WEBHOOK_URL secret is set on this repo.
+      - if: failure() && env.SLACK_WEBHOOK_URL != ''
+        uses: slackapi/slack-github-action@v4
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "🔴 vscode CI failed on ${{ github.ref_name }}"

@@ -1,8 +1,14 @@
+import { createRequire } from 'node:module';
 import * as esbuild from 'esbuild';
-import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 const isWatch = process.argv.includes('--watch');
+
+/**
+ * The bundled MCP server reports the version of the package that IS bundled —
+ * read from the pin's own manifest at build time, never written out. The
+ * version-from-pin law; the hosted worker derives its version the same way.
+ */
 const mcpVersion = require('@shipstatic/mcp/package.json').version;
 
 const shared = {
@@ -22,48 +28,18 @@ const extensionConfig = {
   external: ['vscode'],
 };
 
-// 2. MCP server entry point (runs as separate child process)
-// Bundles @shipstatic/mcp and ALL its dependencies into a single file.
-// No modifications to @shipstatic/mcp — esbuild reads its entry point directly.
+// 2. MCP server entry point (runs as a separate child process).
+//
+// Both entry points are OUR source. This one composes `@shipstatic/mcp`'s
+// exported `createServer` with a stdio transport — see `src/mcp-entry.ts` for
+// why that is a rewrite rather than a refactor. Two onLoad plugins used to live
+// here, patching the mcp's compiled output with regexes; they are gone, and
+// nothing in this file knows anything about that package's internal layout.
 const mcpConfig = {
   ...shared,
-  entryPoints: { 'mcp-server': require.resolve('@shipstatic/mcp') },
+  entryPoints: ['src/mcp-entry.ts'],
   outfile: 'dist/mcp-server.js',
-  plugins: [
-    // Strip the source shebang — VS Code spawns with `node` explicitly
-    {
-      name: 'strip-shebang',
-      setup(build) {
-        build.onLoad({ filter: /@shipstatic[\\/]mcp[\\/]dist[\\/]index\.js$/ }, async (args) => {
-          const { readFile } = await import('fs/promises');
-          let contents = await readFile(args.path, 'utf8');
-          if (contents.startsWith('#!')) {
-            contents = contents.replace(/^#![^\n]*\n/, '');
-          }
-          return { contents, loader: 'js' };
-        });
-      },
-    },
-    // Inline the MCP version string. The MCP source loads it via
-    // `createRequire(import.meta.url)('../package.json')`, which fails when
-    // bundled to CJS (no `import.meta.url`). We read the version statically
-    // from the installed @shipstatic/mcp/package.json — no patching of the
-    // MCP source itself.
-    {
-      name: 'inline-mcp-version',
-      setup(build) {
-        build.onLoad({ filter: /@shipstatic[\\/]mcp[\\/]dist[\\/]server\.js$/ }, async (args) => {
-          const { readFile } = await import('fs/promises');
-          const original = await readFile(args.path, 'utf8');
-          const contents = original.replace(
-            /const \{ version \} = createRequire\(import\.meta\.url\)\('\.\.\/package\.json'\);?/,
-            `const version = ${JSON.stringify(mcpVersion)};`,
-          );
-          return { contents, loader: 'js' };
-        });
-      },
-    },
-  ],
+  define: { MCP_VERSION: JSON.stringify(mcpVersion) },
 };
 
 if (isWatch) {

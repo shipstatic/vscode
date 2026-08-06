@@ -1,25 +1,39 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerCommands } from '../src/commands';
-import { commands, createMockContext, env, window, workspace } from './vscode.mock';
+import {
+  type CommandHandler,
+  commands,
+  createMockContext,
+  env,
+  window,
+  workspace,
+} from './vscode.mock';
 
-// Mock Ship SDK — keep named exports used by commands.ts and auth.ts
+// The SDK is the one collaborator worth faking here: every command is a thin
+// delegation to it. `@shipstatic/types` is deliberately NOT mocked — its
+// constants and validators are pure values, and asserting against a fake copy
+// of them would assert against this file's own data.
 vi.mock('@shipstatic/ship', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    deployments: {
-      upload: vi.fn().mockResolvedValue({
-        deployment: 'happy-cat-abc1234.shipstatic.com',
-        url: 'https://happy-cat-abc1234.shipstatic.com',
+  // A function expression, not an arrow: `commands.ts` calls `new Ship(...)`,
+  // and an arrow has no [[Construct]] — vitest 4 refuses to construct one and
+  // hands back an empty object instead of the stub. The rule below offers an
+  // autofix that would silently do exactly that, so it is off here by name.
+  // biome-ignore lint/complexity/useArrowFunction: must be constructible — `new Ship(...)`
+  default: vi.fn(function () {
+    return {
+      deployments: {
+        upload: vi.fn().mockResolvedValue({
+          deployment: 'happy-cat-abc1234.shipstatic.com',
+          url: 'https://happy-cat-abc1234.shipstatic.com',
+        }),
+      },
+      whoami: vi.fn().mockResolvedValue({
+        email: 'test@example.com',
+        plan: 'free',
+        usage: { customDomains: 0 },
       }),
-    },
-    whoami: vi.fn().mockResolvedValue({
-      email: 'test@example.com',
-      plan: 'free',
-      usage: { customDomains: 0 },
-    }),
-  })),
-  PASSWORD_CONSTRAINTS: { MIN_LENGTH: 6, MAX_LENGTH: 128 },
-  API_KEY: { PREFIX: 'ship-', HEX_LENGTH: 64, TOTAL_LENGTH: 69, HINT_LENGTH: 4 },
-  validateApiKey: vi.fn(),
+    };
+  }),
 }));
 
 // Get the mock Ship constructor for per-test control
@@ -27,9 +41,21 @@ import Ship from '@shipstatic/ship';
 
 const MockShip = vi.mocked(Ship);
 
+/** A constructible stub returning `instance` — see the note in `vi.mock` above. */
+function shipReturning(instance: unknown) {
+  // biome-ignore lint/complexity/useArrowFunction: must be constructible — `new Ship(...)`
+  return function () {
+    return instance;
+  } as unknown as (options: unknown) => Ship;
+}
+
+/** 69 chars — the validator in `setToken` is real, so prompts need real input. */
+const API_KEY = `ship-${'a'.repeat(64)}`;
+const KEY = 'shipstatic.token';
+
 describe('commands', () => {
   let ctx: ReturnType<typeof createMockContext>;
-  let handlers: Map<string, Function>;
+  let handlers: Map<string, CommandHandler>;
 
   beforeEach(() => {
     ctx = createMockContext();
@@ -38,7 +64,7 @@ describe('commands', () => {
     vi.clearAllMocks();
 
     // Capture command handlers
-    commands.registerCommand.mockImplementation((id: string, cb: Function) => {
+    commands.registerCommand.mockImplementation((id: string, cb: CommandHandler) => {
       handlers.set(id, cb);
       return { dispose: () => {} };
     });
@@ -47,33 +73,41 @@ describe('commands', () => {
   });
 
   it('registers all 3 commands', () => {
-    expect(handlers.has('shipstatic.setApiKey')).toBe(true);
+    expect(handlers.has('shipstatic.setToken')).toBe(true);
     expect(handlers.has('shipstatic.deploy')).toBe(true);
     expect(handlers.has('shipstatic.whoami')).toBe(true);
   });
 
-  describe('setApiKey', () => {
-    it('stores key and fires MCP change event', async () => {
-      window.showInputBox.mockResolvedValueOnce('ship-newkey');
+  describe('setToken', () => {
+    it('stores the token and fires the MCP change event', async () => {
+      window.showInputBox.mockResolvedValueOnce(API_KEY);
 
       const { onDidChangeMcpServers } = await import('../src/mcp');
       const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
 
-      await handlers.get('shipstatic.setApiKey')!();
+      await handlers.get('shipstatic.setToken')!();
 
-      expect(ctx.secrets.store).toHaveBeenCalledWith('shipstatic.apiKey', 'ship-newkey');
+      expect(ctx.secrets.store).toHaveBeenCalledWith(KEY, API_KEY);
       expect(fireSpy).toHaveBeenCalled();
     });
 
-    it('does not fire MCP change event when user cancels', async () => {
+    it('does not fire the MCP change event when the user cancels', async () => {
       window.showInputBox.mockResolvedValueOnce(undefined);
 
       const { onDidChangeMcpServers } = await import('../src/mcp');
       const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
 
-      await handlers.get('shipstatic.setApiKey')!();
+      await handlers.get('shipstatic.setToken')!();
 
       expect(fireSpy).not.toHaveBeenCalled();
+    });
+
+    it('resolves to nothing, so the credential cannot ride out on the command result', async () => {
+      // Any extension can `executeCommand('shipstatic.setToken')`; returning
+      // the stored secret to that caller would hand it out.
+      window.showInputBox.mockResolvedValueOnce(API_KEY);
+
+      await expect(handlers.get('shipstatic.setToken')!()).resolves.toBeUndefined();
     });
   });
 
@@ -106,7 +140,7 @@ describe('commands', () => {
     });
 
     it('deploys with correct SDK args and shows URL', async () => {
-      await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
+      await ctx.secrets.store(KEY, API_KEY);
       workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
       window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
       window.showInputBox.mockResolvedValueOnce('');
@@ -116,12 +150,12 @@ describe('commands', () => {
         deployment: 'happy-cat-abc1234.shipstatic.com',
         url: 'https://happy-cat-abc1234.shipstatic.com',
       });
-      MockShip.mockImplementationOnce(() => ({ deployments: { upload: mockUpload } }) as any);
+      MockShip.mockImplementationOnce(shipReturning({ deployments: { upload: mockUpload } }));
 
       await handlers.get('shipstatic.deploy')!();
 
-      // Verify SDK is constructed with the stored API key
-      expect(MockShip).toHaveBeenCalledWith({ apiKey: 'ship-test' });
+      // One slot: the stored credential rides the `token` option, whatever it is.
+      expect(MockShip).toHaveBeenCalledWith({ token: API_KEY });
       // Verify upload is called with selected path and via tracking (no password)
       expect(mockUpload).toHaveBeenCalledWith('/test/dist', { via: 'vsc' });
       // Verify URL shown to user — uses canonical result.url, not reconstructed
@@ -136,7 +170,7 @@ describe('commands', () => {
     });
 
     it('forwards password to the SDK when user provides one', async () => {
-      await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
+      await ctx.secrets.store(KEY, API_KEY);
       workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
       window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
       window.showInputBox.mockResolvedValueOnce('hunter2!');
@@ -146,7 +180,7 @@ describe('commands', () => {
         deployment: 'happy-cat-abc1234.shipstatic.com',
         url: 'https://happy-cat-abc1234.shipstatic.com',
       });
-      MockShip.mockImplementationOnce(() => ({ deployments: { upload: mockUpload } }) as any);
+      MockShip.mockImplementationOnce(shipReturning({ deployments: { upload: mockUpload } }));
 
       await handlers.get('shipstatic.deploy')!();
 
@@ -154,7 +188,7 @@ describe('commands', () => {
     });
 
     it('opens browser when user selects "Open in Browser"', async () => {
-      await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
+      await ctx.secrets.store(KEY, API_KEY);
       workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
       window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
       window.showInputBox.mockResolvedValueOnce('');
@@ -165,7 +199,7 @@ describe('commands', () => {
       expect(env.openExternal).toHaveBeenCalled();
     });
 
-    it('deploys without API key and shows expiry', async () => {
+    it('deploys anonymously with no token and shows the claim expiry', async () => {
       workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
       window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
       window.showInputBox.mockResolvedValueOnce('');
@@ -176,57 +210,60 @@ describe('commands', () => {
         url: 'https://happy-cat-abc1234.shipstatic.com',
         claim: 'https://my.shipstatic.com/claim/abc123',
       });
-      MockShip.mockImplementationOnce(() => ({ deployments: { upload: mockUpload } }) as any);
+      MockShip.mockImplementationOnce(shipReturning({ deployments: { upload: mockUpload } }));
 
       await handlers.get('shipstatic.deploy')!();
 
-      expect(MockShip).toHaveBeenCalledWith({});
+      // Anonymity is the ABSENCE of a credential, in band: one construction,
+      // an undefined token, no agent-token round trip. The 0.9.6 path minted
+      // one through `POST /tokens/agent`, which the 2.x API deleted.
+      expect(MockShip).toHaveBeenCalledWith({ token: undefined });
       expect(window.showInformationMessage).toHaveBeenCalledWith(
         'Deployed to https://happy-cat-abc1234.shipstatic.com — expires in 3 days',
         'Open in Browser',
         'Copy URL',
-        'Set API Key',
+        'Set Token',
       );
     });
 
-    it('offers Set API Key from claimable deploy notification', async () => {
+    it('offers Set Token from the claimable deploy notification', async () => {
       workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
       window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
       window.showInputBox
         .mockResolvedValueOnce('') // password prompt
-        .mockResolvedValueOnce('ship-newkey'); // Set API Key prompt
-      window.showInformationMessage.mockResolvedValueOnce('Set API Key');
+        .mockResolvedValueOnce(API_KEY); // Set Token prompt
+      window.showInformationMessage.mockResolvedValueOnce('Set Token');
 
       const mockUpload = vi.fn().mockResolvedValue({
         deployment: 'happy-cat-abc1234.shipstatic.com',
         url: 'https://happy-cat-abc1234.shipstatic.com',
         claim: 'https://my.shipstatic.com/claim/abc123',
       });
-      MockShip.mockImplementationOnce(() => ({ deployments: { upload: mockUpload } }) as any);
+      MockShip.mockImplementationOnce(shipReturning({ deployments: { upload: mockUpload } }));
 
       const { onDidChangeMcpServers } = await import('../src/mcp');
       const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
 
       await handlers.get('shipstatic.deploy')!();
 
-      expect(ctx.secrets.store).toHaveBeenCalledWith('shipstatic.apiKey', 'ship-newkey');
+      expect(ctx.secrets.store).toHaveBeenCalledWith(KEY, API_KEY);
       expect(fireSpy).toHaveBeenCalled();
     });
 
-    it('does not fire MCP event when Set API Key is cancelled', async () => {
+    it('does not fire MCP event when Set Token is cancelled', async () => {
       workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
       window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
       window.showInputBox
         .mockResolvedValueOnce('') // password prompt
-        .mockResolvedValueOnce(undefined); // Set API Key cancelled
-      window.showInformationMessage.mockResolvedValueOnce('Set API Key');
+        .mockResolvedValueOnce(undefined); // Set Token cancelled
+      window.showInformationMessage.mockResolvedValueOnce('Set Token');
 
       const mockUpload = vi.fn().mockResolvedValue({
         deployment: 'happy-cat-abc1234.shipstatic.com',
         url: 'https://happy-cat-abc1234.shipstatic.com',
         claim: 'https://my.shipstatic.com/claim/abc123',
       });
-      MockShip.mockImplementationOnce(() => ({ deployments: { upload: mockUpload } }) as any);
+      MockShip.mockImplementationOnce(shipReturning({ deployments: { upload: mockUpload } }));
 
       const { onDidChangeMcpServers } = await import('../src/mcp');
       const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
@@ -242,52 +279,64 @@ describe('commands', () => {
       window.showInputBox.mockResolvedValueOnce('');
 
       MockShip.mockImplementationOnce(
-        () =>
-          ({
-            deployments: {
-              upload: vi.fn().mockRejectedValue(new Error('Upload failed')),
-            },
-          }) as any,
+        shipReturning({
+          deployments: { upload: vi.fn().mockRejectedValue(new Error('Upload failed')) },
+        }),
       );
 
       await handlers.get('shipstatic.deploy')!();
 
       expect(window.showErrorMessage).toHaveBeenCalledWith('ShipStatic: Upload failed');
     });
+
+    it('falls back to its own sentence when what was thrown is not an Error', async () => {
+      // JavaScript lets anything be thrown, and a rejection carrying a bare
+      // string would otherwise reach the user as "ShipStatic: undefined".
+      workspace.workspaceFolders = [{ uri: { fsPath: '/test' } }];
+      window.showOpenDialog.mockResolvedValueOnce([{ fsPath: '/test/dist' }]);
+      window.showInputBox.mockResolvedValueOnce('');
+
+      MockShip.mockImplementationOnce(
+        shipReturning({ deployments: { upload: vi.fn().mockRejectedValue('nope') } }),
+      );
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(window.showErrorMessage).toHaveBeenCalledWith('ShipStatic: Deployment failed');
+    });
   });
 
   describe('whoami', () => {
     it('shows account info including custom domain usage (singular)', async () => {
-      await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
+      await ctx.secrets.store(KEY, API_KEY);
       MockShip.mockImplementationOnce(
-        () =>
-          ({
-            whoami: vi.fn().mockResolvedValue({
-              email: 'test@example.com',
-              plan: 'standard',
-              usage: { customDomains: 1 },
-            }),
-          }) as any,
+        shipReturning({
+          whoami: vi.fn().mockResolvedValue({
+            email: 'test@example.com',
+            plan: 'standard',
+            usage: { customDomains: 1 },
+          }),
+        }),
       );
 
       await handlers.get('shipstatic.whoami')!();
 
+      expect(MockShip).toHaveBeenCalledWith({ token: API_KEY });
       expect(window.showInformationMessage).toHaveBeenCalledWith(
         'ShipStatic: test@example.com (standard) · 1 custom domain',
       );
     });
 
     it('shows account info with plural domain count', async () => {
-      await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
+      await ctx.secrets.store(KEY, API_KEY);
       MockShip.mockImplementationOnce(
-        () =>
-          ({
-            whoami: vi.fn().mockResolvedValue({
-              email: 'test@example.com',
-              plan: 'free',
-              usage: { customDomains: 3 },
-            }),
-          }) as any,
+        shipReturning({
+          whoami: vi.fn().mockResolvedValue({
+            email: 'test@example.com',
+            plan: 'free',
+            usage: { customDomains: 3 },
+          }),
+        }),
       );
 
       await handlers.get('shipstatic.whoami')!();
@@ -298,7 +347,7 @@ describe('commands', () => {
     });
 
     it('shows zero domains as plural', async () => {
-      await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
+      await ctx.secrets.store(KEY, API_KEY);
 
       await handlers.get('shipstatic.whoami')!();
 
@@ -309,13 +358,10 @@ describe('commands', () => {
     });
 
     it('shows error on failure', async () => {
-      await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
+      await ctx.secrets.store(KEY, API_KEY);
 
       MockShip.mockImplementationOnce(
-        () =>
-          ({
-            whoami: vi.fn().mockRejectedValue(new Error('Unauthorized')),
-          }) as any,
+        shipReturning({ whoami: vi.fn().mockRejectedValue(new Error('Unauthorized')) }),
       );
 
       await handlers.get('shipstatic.whoami')!();
@@ -323,23 +369,35 @@ describe('commands', () => {
       expect(window.showErrorMessage).toHaveBeenCalledWith('ShipStatic: Unauthorized');
     });
 
-    it('fires MCP change event when key is entered', async () => {
-      window.showInputBox.mockResolvedValueOnce('ship-newkey');
+    it('falls back to its own sentence when what was thrown is not an Error', async () => {
+      await ctx.secrets.store(KEY, API_KEY);
+
+      MockShip.mockImplementationOnce(shipReturning({ whoami: vi.fn().mockRejectedValue('nope') }));
+
+      await handlers.get('shipstatic.whoami')!();
+
+      expect(window.showErrorMessage).toHaveBeenCalledWith(
+        'ShipStatic: Failed to get account info',
+      );
+    });
+
+    it('fires MCP change event when a token is entered', async () => {
+      window.showInputBox.mockResolvedValueOnce(API_KEY);
 
       const { onDidChangeMcpServers } = await import('../src/mcp');
       const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
 
       await handlers.get('shipstatic.whoami')!();
 
-      expect(ctx.secrets.store).toHaveBeenCalledWith('shipstatic.apiKey', 'ship-newkey');
+      expect(ctx.secrets.store).toHaveBeenCalledWith(KEY, API_KEY);
       expect(fireSpy).toHaveBeenCalled();
       expect(window.showInformationMessage).toHaveBeenCalledWith(
         'ShipStatic: test@example.com (free) · 0 custom domains',
       );
     });
 
-    it('does not fire MCP event when key already stored', async () => {
-      await ctx.secrets.store('shipstatic.apiKey', 'ship-test');
+    it('does not fire MCP event when a token is already stored', async () => {
+      await ctx.secrets.store(KEY, API_KEY);
 
       const { onDidChangeMcpServers } = await import('../src/mcp');
       const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
@@ -350,7 +408,7 @@ describe('commands', () => {
       expect(window.showInputBox).not.toHaveBeenCalled();
     });
 
-    it('does nothing when user cancels auth', async () => {
+    it('does nothing when the user cancels the prompt', async () => {
       window.showInputBox.mockResolvedValueOnce(undefined);
 
       await handlers.get('shipstatic.whoami')!();

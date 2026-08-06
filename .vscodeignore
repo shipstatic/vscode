@@ -1,15 +1,20 @@
-src/**
-tests/**
-node_modules/**
-dist/**/*.map
-dist/*.vsix
-esbuild.mjs
-tsconfig.json
-pnpm-lock.yaml
-vitest.config.ts
-CLAUDE.md
-.github/**
-.husky/**
-.vscode/**
-.git
-.gitignore
+# An ALLOWLIST, expressed the only way this file can express one: exclude
+# everything, then name what ships.
+#
+# It was a denylist until 1.0.0, and a denylist only excludes what someone
+# thought of. By then it was shipping the coverage HTML report, the pre-commit
+# hook, `biome.jsonc`, `renovate.json`, `AGENTS.md` and
+# `.git-blame-ignore-revs` into the Marketplace artifact — every one of them
+# added to the repo AFTER the ignore file was last considered, and two of them
+# describing internal tooling. It also still excluded `.husky/**`, which has not
+# existed here for months.
+#
+# Six lines is the whole extension: the manifest, the listing, the licence, the
+# icon, and the two bundles. `vsce ls` is the check.
+**
+!package.json
+!README.md
+!LICENSE
+!icon.png
+!dist/extension.js
+!dist/mcp-server.js
