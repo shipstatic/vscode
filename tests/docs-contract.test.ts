@@ -44,6 +44,19 @@ describe('README', () => {
     expect(Number(claimed?.[1])).toBe(1 + ACCOUNT_TOOL_NAMES.length);
   });
 
+  it('states the editor minimum the manifest actually declares', () => {
+    // The floor is one fact with three statements — `engines.vscode`, the
+    // exact `@types/vscode` pin that makes tsc enforce it, and this sentence.
+    // Only the listing is unenforceable by a compiler, so it gets a fence.
+    // It read "1.99 or later" from 0.2.x until 2026-08-06, against an API that
+    // does not exist below 1.101: the Marketplace was telling users the
+    // extension would work on editors where `activate()` throws.
+    const floor = manifest.engines.vscode.replace(/^\^/, '');
+    const [major, minor] = floor.split('.');
+
+    expect(README).toContain(`VS Code ${major}.${minor} or later`);
+  });
+
   it('speaks the one-credential vocabulary and nothing retired', () => {
     // The 1.0.0 break, stated where a user reads it. `SHIP_API_KEY` and
     // `SHIP_DEPLOY_TOKEN` are read by nothing since ship 2.0; a listing that

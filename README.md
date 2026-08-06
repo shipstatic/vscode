@@ -57,7 +57,7 @@ Version 1.0 speaks the ShipStatic 2.x platform, and the credential vocabulary ch
 
 ## Requirements
 
-- VS Code 1.99 or later
+- VS Code 1.101 or later
 
 ## Links
 

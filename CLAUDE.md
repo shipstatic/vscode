@@ -284,7 +284,24 @@ git tag v1.0.0 && git push origin v1.0.0   # the whole release
 
 ## Key Constraints
 
-- **Minimum VS Code 1.99** — `vscode.lm.registerMcpServerDefinitionProvider` API
+- **The engines floor is PROVEN, and the types pin IS the floor.**
+  `engines.vscode` states the minimum; `@types/vscode` is pinned **exactly** to
+  that minimum, with no caret, so `tsc` refuses any API the floor does not
+  have. A floated types pin certifies the code against APIs the floor lacks —
+  which is precisely how the floor was wrong from 0.2.x until 2026-08-06.
+
+  It read `^1.99.0` while `vscode.lm.registerMcpServerDefinitionProvider` and
+  `McpStdioServerDefinition` do not exist in the stable API until **1.101.0**
+  (bisected against `@types/vscode` on npm: absent through 1.100.0, present
+  from 1.101.0, and the `McpStdioServerDefinition` declaration is byte-identical
+  from there to 1.110). On 1.99 or 1.100 the API is `undefined`, `activate()`
+  throws, and the WHOLE extension bricks — commands and status bar included —
+  for exactly the users the Marketplace told it was compatible. The floated
+  `^1.99.0` types pin resolved to 1.110.0, so nothing could see it.
+
+  When raising the floor, raise BOTH and re-run `pnpm typecheck` — it is the
+  check. `tests/docs-contract.test.ts` holds the README's stated minimum to
+  `engines` so the listing cannot drift from the manifest.
 - **`process.execPath`** — Uses VS Code's bundled Node.js to spawn the MCP server, not `'node'` from PATH
 - **The bundled-MCP design is deliberate** — the server is frozen into the `.vsix` at build time, so this extension never resolves npm's `latest` at runtime. That is why it was exempt from the MCP `latest`-flip choreography, and why its release is its own. An extension that ran `npx` would resolve `latest` and break that choreography.
 - **No API-URL setting** — `contributes.configuration` is empty and published artifacts are prod-branded by law, so every installed copy talks to production. For dev verification, `SHIP_API_URL` in the Extension Development Host's launch environment reaches the SDK (the extension never ships it); the bundled MCP child cannot be redirected that way by design, so drive `dist/mcp-server.js` directly to verify it against another environment.
