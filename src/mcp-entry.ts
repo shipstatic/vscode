@@ -17,7 +17,7 @@
  * `@shipstatic/mcp` exports `createServer` for exactly this consumer (see its
  * `src/index.ts` — "what a second CONSUMER needs"), esbuild bundles a static
  * import graph, and `serverInfo.version` is the pin's by construction rather
- * than by a regex that can silently fail to match. `tests/mcp-bundle.test.ts`
+ * than by a regex that can silently fail to match. `tests/mcp-entry.test.ts`
  * boots the artifact and asserts both, so the class cannot come back.
  */
 
