@@ -61,6 +61,10 @@
         "title": "ShipStatic: Deploy"
       },
       {
+        "command": "shipstatic.deployWithPassword",
+        "title": "ShipStatic: Deploy with Password"
+      },
+      {
         "command": "shipstatic.whoami",
         "title": "ShipStatic: Account Info"
       }

@@ -20,6 +20,7 @@ All tools are available in agent mode automatically — no manual MCP configurat
 | Command | Description |
 |---------|-------------|
 | **ShipStatic: Deploy** | Pick a folder, get a live URL |
+| **ShipStatic: Deploy with Password** | Same, behind a password |
 | **ShipStatic: Set Token** | Store your credential securely in your OS keychain |
 | **ShipStatic: Account Info** | Check your email, plan, and usage |
 
@@ -32,9 +33,13 @@ A **deploy button** in the status bar provides one-click deployments.
 
 That's it. Your site is live instantly.
 
+From the palette or the status bar, **Deploy** offers the folder you deployed last, then any build output it finds (`dist`, `build`, `out`, `public`, `_site`) — so repeat deploys are a single keypress.
+
 ### Password Protection
 
-Want a private site? The **Deploy** command prompts for an optional password (6–128 characters). When set, visitors must unlock before viewing — on the deployment URL and on any custom domains pointing at it. In agent mode, just ask: *"deploy with password hunter2"*.
+Want a private site? Run **ShipStatic: Deploy with Password** instead — same flow, plus one prompt (6–128 characters). Visitors must unlock before viewing, on the deployment URL and on any custom domains pointing at it. In agent mode, just ask: *"deploy with password hunter2"*.
+
+Plain **Deploy** never asks, so the common path stays a single pick.
 
 ### Token (optional)
 
