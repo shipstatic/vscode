@@ -1,11 +1,16 @@
 /**
- * Realm integrity for the two bundles — the check `esbuild.mjs` runs on build.
+ * Bundle integrity — the checks `esbuild.mjs` runs on every build, from the
+ * build's own metafile. Two assertions, two failure classes:
+ *
+ *   - `assertSingleCopy` — a fenced package resolving TWICE inside one bundle
+ *     (a split realm; silent by construction).
+ *   - `assertAbsent` — a package appearing in a bundle that must not carry it
+ *     at all (a graph leak; silent by size alone).
  *
  * Its own module rather than a closure inside the bundler config so the
- * behaviour is testable: `tests/single-copy.test.ts` feeds it a synthetic
- * metafile and asserts it FIRES. A fence nobody has watched fail is a fence
- * nobody knows the shape of, and this one guards a failure that is silent by
- * construction.
+ * behaviour is testable: `tests/bundle-integrity.test.ts` feeds both a
+ * synthetic metafile and asserts they FIRE. A fence nobody has watched fail is
+ * a fence nobody knows the shape of.
  */
 
 /**
@@ -39,10 +44,26 @@ export const SINGLE_COPY = [
   'zod',
 ];
 
-/** Distinct installed roots per package name, read from esbuild's own metafile. */
+/**
+ * The files that CONTRIBUTED BYTES to the emitted bundles.
+ *
+ * `metafile.inputs` is the wrong source and the difference is load-bearing:
+ * it lists every module esbuild PARSED, including ones tree-shaking then
+ * dropped — so a fence reading it calls a successfully-shaken graph a leak.
+ * Caught live: with `sideEffects` doing its job the extension bundle carried
+ * vocabulary constants only, and the absence fence still fired on SDK modules
+ * that existed nowhere in the output. What ships is `outputs[].inputs`.
+ */
+function bundledFiles(metafile) {
+  return Object.values(metafile.outputs ?? {}).flatMap((output) =>
+    Object.keys(output.inputs ?? {}),
+  );
+}
+
+/** Distinct installed roots per package name, among what was actually bundled. */
 export function packageRoots(metafile) {
   const roots = new Map();
-  for (const file of Object.keys(metafile.inputs)) {
+  for (const file of bundledFiles(metafile)) {
     // The LAST `node_modules/` segment: a nested install is a different copy,
     // and pnpm's store paths contain the marker more than once.
     const marker = 'node_modules/';
@@ -68,7 +89,35 @@ export function assertSingleCopy(label, metafile) {
   throw new Error(
     `${label}: more than one copy of a package that must have exactly one.\n${detail}\n\n` +
       'Two copies split a realm silently — see the note above SINGLE_COPY in ' +
-      'scripts/single-copy.mjs. Converge the pins across this repo and ' +
+      'scripts/bundle-integrity.mjs. Converge the pins across this repo and ' +
       '@shipstatic/mcp, then reinstall.',
+  );
+}
+
+/**
+ * Packages the EXTENSION-HOST bundle must not contain.
+ *
+ * `dist/extension.js` imports `@shipstatic/mcp` for its vocabulary — the one
+ * authored expiry phrase — and for nothing else; the MCP SDK belongs only to
+ * `dist/mcp-server.js`, the child process that actually runs a server. The
+ * library's `sideEffects` manifest field is what lets esbuild drop the unused
+ * server graph, and this assertion is what notices when that stops working:
+ * measured before the field existed, the host bundle silently grew +142KB of
+ * SDK it could never call.
+ */
+export const ABSENT_FROM_EXTENSION = ['@modelcontextprotocol/sdk'];
+
+/** @throws when a package that must be absent appears in the bundle at all. */
+export function assertAbsent(label, metafile, names) {
+  const roots = packageRoots(metafile);
+  const present = names.filter((name) => roots.has(name));
+  if (present.length === 0) return;
+
+  throw new Error(
+    `${label}: contains ${present.join(', ')}, which this bundle must not carry.\n\n` +
+      'The extension host quotes vocabulary; only the child process runs a server. ' +
+      'Usual cause: @shipstatic/mcp lost its sideEffects field, or a new import in ' +
+      'src/ reaches the server graph — see ABSENT_FROM_EXTENSION in ' +
+      'scripts/bundle-integrity.mjs.',
   );
 }

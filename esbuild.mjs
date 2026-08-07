@@ -1,6 +1,10 @@
 import { createRequire } from 'node:module';
 import * as esbuild from 'esbuild';
-import { assertSingleCopy } from './scripts/single-copy.mjs';
+import {
+  ABSENT_FROM_EXTENSION,
+  assertAbsent,
+  assertSingleCopy,
+} from './scripts/bundle-integrity.mjs';
 
 const require = createRequire(import.meta.url);
 const isWatch = process.argv.includes('--watch');
@@ -60,4 +64,6 @@ if (isWatch) {
   ]);
   assertSingleCopy('dist/extension.js', extension.metafile);
   assertSingleCopy('dist/mcp-server.js', mcp.metafile);
+  // The host quotes vocabulary; only the child runs a server.
+  assertAbsent('dist/extension.js', extension.metafile, ABSENT_FROM_EXTENSION);
 }
