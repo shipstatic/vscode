@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { ACCOUNT_TOOL_NAMES } from '@shipstatic/mcp';
+import { MY_API_KEY_URL } from '@shipstatic/types';
 import { describe, expect, it } from 'vitest';
 import manifest from '../package.json';
 import { PUBLIC_EXPIRY } from '../src/commands';
@@ -63,6 +64,13 @@ describe('README', () => {
     // still teaches them teaches a setting that does nothing.
     expect(README).not.toMatch(/SHIP_API_KEY|SHIP_DEPLOY_TOKEN/);
     expect(README).toContain('SHIP_TOKEN');
+  });
+
+  it('points at the console URL types owns, not a hand-written twin', () => {
+    // `MY_API_KEY_URL` was written out in five files across three repos until
+    // types 2.5.0-beta.21; this listing's copy is now held to the owner, so a
+    // console route change cannot leave the Marketplace teaching a dead link.
+    expect(README).toContain(MY_API_KEY_URL);
   });
 
   it('states every duration as the one public expiry the notification uses', () => {

@@ -24,7 +24,7 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createServer } from '@shipstatic/mcp';
 import Ship from '@shipstatic/ship';
-import { DeploymentVia } from '@shipstatic/types';
+import { DeploymentVia, SHIP_ENV } from '@shipstatic/types';
 
 /**
  * The pinned `@shipstatic/mcp` version, substituted by esbuild's `define` from
@@ -39,7 +39,7 @@ async function main() {
   // `resolveMcpServerDefinition` builds from SecretStorage alone. It is
   // optional: without it, deployments go to the public account and answer with
   // a claim URL. One slot, any platform token — the server classifies it.
-  const ship = new Ship({ token: process.env.SHIP_TOKEN });
+  const ship = new Ship({ token: process.env[SHIP_ENV.TOKEN] });
   // `via` names the DISTRIBUTION SURFACE, not the protocol — the GitHub Action
   // reports `git` whatever invoked the workflow. This server ships inside the
   // extension's `.vsix`, so its deploys are the extension's; the palette's

@@ -1,4 +1,5 @@
 import * as path from 'node:path';
+import { SHIP_ENV } from '@shipstatic/types';
 import * as vscode from 'vscode';
 import { getToken } from './auth';
 
@@ -36,15 +37,22 @@ export function registerMcpProvider(context: vscode.ExtensionContext) {
     // contract did: SHIP_API_KEY and SHIP_DEPLOY_TOKEN are read by nothing in
     // the one-credential world, and nulling a variable no one reads is noise
     // that reads like protection.
+    //
+    // Since types 2.5.0-beta.21 the block DERIVES from `SHIP_ENV` — the SDK's
+    // own statement of its ambient pair — so a grown env contract reaches this
+    // scrub at the pin bump that introduces it. The test stays HAND-PINNED on
+    // the two names deliberately: growth turns it red, and a human widens the
+    // scrub knowingly rather than a derivation widening it silently.
     resolveMcpServerDefinition: async (server) => {
       // This provider only ever provides stdio definitions; the narrowing
       // tells the type system what the provider already guarantees.
       if (server instanceof vscode.McpStdioServerDefinition) {
         const token = await getToken(context);
-        server.env = {
-          SHIP_TOKEN: token ?? null,
-          SHIP_API_URL: null,
-        };
+        const env: Record<string, string | null> = Object.fromEntries(
+          Object.values(SHIP_ENV).map((name) => [name, null]),
+        );
+        env[SHIP_ENV.TOKEN] = token ?? null;
+        server.env = env;
       }
       return server;
     },
