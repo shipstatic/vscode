@@ -1,27 +1,28 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { PUBLIC_EXPIRY } from '@shipstatic/mcp';
 import Ship from '@shipstatic/ship';
-import {
-  ErrorType,
-  isShipError,
-  PASSWORD_CONSTRAINTS,
-  PUBLIC_DEPLOYMENT_TTL_SECONDS,
-} from '@shipstatic/types';
+import { ErrorType, isShipError, PASSWORD_CONSTRAINTS } from '@shipstatic/types';
 import * as vscode from 'vscode';
 import { getToken, setToken } from './auth';
 import { onDidChangeMcpServers } from './mcp';
 
 /**
- * The anonymous-deploy lifetime, DERIVED from the platform constant rather
- * than written out. `@shipstatic/types` owns the number and every surface
- * quoting it derives from there, so a TTL change cannot leave a sentence
- * behind.
+ * The anonymous-deploy lifetime is QUOTED, never authored here.
  *
- * Exported for `tests/docs-contract.test.ts`, which holds the published
- * listing to this exact phrase — the fence has to read production's own
- * value, or it is two hand-written statements agreeing with each other.
+ * `@shipstatic/types` owns the number (`PUBLIC_DEPLOYMENT_TTL_SECONDS`) and
+ * `@shipstatic/mcp`'s vocabulary authors the one English phrase derived from
+ * it — the phrase both transports, the bundled server's instructions, and this
+ * palette notification all speak. One owner is the entire point: this file
+ * carried its own derivation of the same expression once, which is two
+ * statements of one sentence in two repos, and exactly the drift class the
+ * vocabulary module exists to delete.
+ *
+ * Re-exported for `tests/docs-contract.test.ts`, which holds the published
+ * listing to the phrase THIS surface actually shows — the fence reads
+ * production's own value, not a copy of it.
  */
-export const PUBLIC_EXPIRY = `${PUBLIC_DEPLOYMENT_TTL_SECONDS / 86_400} days`;
+export { PUBLIC_EXPIRY } from '@shipstatic/mcp';
 
 /** The action label offered on an anonymous deploy and on an auth failure. */
 const SET_TOKEN = 'Set Token';

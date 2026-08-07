@@ -20,7 +20,7 @@ src/
 └── mcp-entry.ts      # THE BUNDLED SERVER's entry — a child process, not the host
 
 scripts/
-└── single-copy.mjs   # the build's realm fence (one copy of the shared packages)
+└── bundle-integrity.mjs  # the build's bundle fences: single-copy + absence
 ```
 
 **Two esbuild entry points, and since 1.0.0 both are OUR source:**
@@ -83,14 +83,14 @@ Two consequences worth knowing:
   the mcp declares. The extension composes a stdio MCP server, so it depends on
   the MCP SDK — and matching ranges is what keeps pnpm resolving ONE copy, so
   esbuild bundles one module instance rather than handing `server.connect()` a
-  transport from a different realm. **`scripts/single-copy.mjs` fences that on
+  transport from a different realm. **`scripts/bundle-integrity.mjs` fences that on
   every build**, from esbuild's own metafile, for the SDK plus
   `@shipstatic/types`, `@shipstatic/ship` and `zod`. Two copies of types splits
   the platform constants; two copies of ship splits `ShipError`, and
   `isShipError` is deliberately STRUCTURAL rather than `instanceof`, so a split
   realm degrades quietly instead of throwing — which is exactly why a fence
   beats noticing. The check lives in `scripts/` rather than inside the bundler
-  config so `tests/single-copy.test.ts` can watch it FAIL; the build only ever
+  config so `tests/bundle-integrity.test.ts` can watch it FAIL; the build only ever
   exercises the passing path.
 - **`tests/mcp-entry.test.ts` boots the built artifact** and asserts its
   identity and its catalogue. That fence is what makes the whole class
@@ -183,10 +183,22 @@ Deployment tracking uses `via: 'vsc'` — a member of `DeploymentVia` in
 `@shipstatic/types`, and since this repo pins types directly it is now the
 compiler's job rather than a lockstep anyone has to remember.
 
-**Durations are derived, never written.** `PUBLIC_EXPIRY` in `commands.ts`
-comes from `PUBLIC_DEPLOYMENT_TTL_SECONDS` in `@shipstatic/types`, and
-`tests/docs-contract.test.ts` holds the README to that same value — so a TTL
-change cannot leave a sentence behind on the Marketplace.
+**Durations are quoted, never authored.** The expiry phrase the palette
+notification shows is `PUBLIC_EXPIRY` from `@shipstatic/mcp`'s vocabulary —
+the same authored phrase both MCP transports and the bundled server's
+instructions speak, itself derived from `PUBLIC_DEPLOYMENT_TTL_SECONDS` in
+`@shipstatic/types`. One number, one phrase, one owner each; this file carried
+its own derivation of the identical expression once, which was two statements
+of one sentence in two repos. `tests/docs-contract.test.ts` holds the README
+to the same phrase, so a TTL change cannot leave a sentence behind on the
+Marketplace.
+
+Importing from the mcp package into the EXTENSION-HOST bundle is safe for one
+stated reason: the package's `sideEffects` field marks everything but its
+executable inert, so esbuild drops the unused server graph and the host bundle
+gains vocabulary constants, not an MCP SDK. The absence fence in
+`scripts/bundle-integrity.mjs` is what notices if that ever stops being true —
+it fired on the real +142KB leak the day it was written.
 
 ## Quick Reference
 
@@ -212,7 +224,7 @@ tests/
 ├── commands.test.ts        # all 3 commands + SDK arg verification
 ├── extension.test.ts       # activation wiring + the migration's ORDERING
 ├── status-bar.test.ts      # item properties + disposal
-├── single-copy.test.ts     # the build's realm fence, watched FAILING
+├── bundle-integrity.test.ts # the build's bundle fences, watched FAILING
 ├── mcp-entry.test.ts       # fence: the BUILT bundle boots and is the pinned server
 ├── docs-contract.test.ts   # fence: the published listing tracks the extension
 └── host/                   # `pnpm test:host` — a real editor at the floor
@@ -263,7 +275,7 @@ second file would have nothing to differ about.
 | Fence | Catches |
 |---|---|
 | `mcp-entry.test.ts` | The bundle not being a working server, or not being the pinned one. The whole class above, plus a stale `dist/` certifying itself — its freshness guard names `src/`, `esbuild.mjs` AND the lockfile, because a dependency bump without a rebuild is the same lie. |
-| `scripts/single-copy.mjs` (on build) | A split realm: two copies of `@shipstatic/types`, `@shipstatic/ship`, the MCP SDK or `zod` in a bundle. Silent by construction — `isShipError` is structural. |
+| `scripts/bundle-integrity.mjs` (on build) | Two classes, both silent: a SPLIT REALM (two copies of `@shipstatic/types`, `@shipstatic/ship`, the MCP SDK or `zod` in one bundle — `isShipError` is structural, so nothing throws), and a GRAPH LEAK (the MCP SDK appearing in the extension-host bundle at all; the host quotes vocabulary, only the child runs a server). |
 | `pnpm test:host` | The contract with the EDITOR: the extension not loading, `activate()` throwing at the engines floor, a contributed command that is never registered. Nothing else in the repo can see any of it, and nothing else loads the built `dist/extension.js`. |
 | `docs-contract.test.ts` | Drift between the Marketplace listing and the extension: a command title the manifest does not contribute, a tool count the bundled MCP does not serve, retired credential vocabulary, a duration that is not the derived expiry. |
 | `extension.test.ts` ordering assertion | The migration racing the provider registration — the one bug that would present as "my token stopped working in agent mode". |
