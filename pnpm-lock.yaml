@@ -15,14 +15,14 @@ importers:
         specifier: ^1.30.0
         version: 1.30.0(zod@4.4.3)
       '@shipstatic/mcp':
-        specifier: 1.0.0-beta.13
-        version: 1.0.0-beta.13
+        specifier: 1.0.0-beta.14
+        version: 1.0.0-beta.14
       '@shipstatic/ship':
-        specifier: 2.0.0-beta.18
-        version: 2.0.0-beta.18
+        specifier: 2.0.0-beta.20
+        version: 2.0.0-beta.20
       '@shipstatic/types':
-        specifier: 2.5.0-beta.22
-        version: 2.5.0-beta.22
+        specifier: 2.5.0-beta.23
+        version: 2.5.0-beta.23
       '@types/node':
         specifier: ^20.19.43
         version: 20.19.43
@@ -808,18 +808,18 @@ packages:
     resolution: {integrity: sha512-Nqc90v4lWCXyakD6xNyNACBJNJ0tNCwj2WNk/7ivyacYHxiITVgmLUFXTBOeCdy79iz6HtN9Y31uw/jbLrdOAg==}
     engines: {node: '>=20.0.0'}
 
-  '@shipstatic/mcp@1.0.0-beta.13':
-    resolution: {integrity: sha512-UbnyGLdtWJkTFgwg9Hrj6yKTagfUAnApnEoe3ooHgIV6g5aCTMBCCq507NQLsy3BWM/3i4+9TaaMtylR06Sp5w==}
+  '@shipstatic/mcp@1.0.0-beta.14':
+    resolution: {integrity: sha512-P+C8Fz/nQGUlzgQ1LAwJnzBwtLea1PgCgV8QW5vdpiUuMljTIZTKB3jvdzdQaoG7S6dzOX//wd9N57zhF3I/Zg==}
     engines: {node: '>=20.0.0'}
     hasBin: true
 
-  '@shipstatic/ship@2.0.0-beta.18':
-    resolution: {integrity: sha512-iVIBw22loY5itkB1dM6JSBbOVKH14Rgqaf9MOVUOy4NlHfb8uf+4Xg4f0I3vk6bsGkOj50rL7Mxs4xM+Ma/2vw==}
+  '@shipstatic/ship@2.0.0-beta.20':
+    resolution: {integrity: sha512-J0GL7fwMIWGe4sdMWjyDP2QlxO5OhpnyeaI1+IYKo6xuFk7yyii07J/z3teesY92OFP1sbvdnOk7Q6IrV5N77w==}
     engines: {node: '>=20.0.0'}
     hasBin: true
 
-  '@shipstatic/types@2.5.0-beta.22':
-    resolution: {integrity: sha512-Aoc4hRnu7HffD26GF1ekiNDTssRtOeoMkqtrvHMxfAmmb6uy7iPsKFUbuwseKjJqbLsW1pcI4a9uvRbaC2VUdA==}
+  '@shipstatic/types@2.5.0-beta.23':
+    resolution: {integrity: sha512-U5ZGiqovz4mq2Yr9r6pEEW/oOrPQm8+6/g6pSpTftCDE7iEs7yqWOQdV4ZgAJwwVh9AUmar8xxvurZ2ZVuHB3w==}
     engines: {node: '>=20.0.0'}
 
   '@sindresorhus/merge-streams@2.3.0':
@@ -3096,17 +3096,17 @@ snapshots:
 
   '@secretlint/types@10.2.2': {}
 
-  '@shipstatic/mcp@1.0.0-beta.13':
+  '@shipstatic/mcp@1.0.0-beta.14':
     dependencies:
       '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
-      '@shipstatic/ship': 2.0.0-beta.18
-      '@shipstatic/types': 2.5.0-beta.22
+      '@shipstatic/ship': 2.0.0-beta.20
+      '@shipstatic/types': 2.5.0-beta.23
       zod: 4.4.3
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - supports-color
 
-  '@shipstatic/ship@2.0.0-beta.18':
+  '@shipstatic/ship@2.0.0-beta.20':
     dependencies:
       columnify: 1.6.0
       commander: 14.0.3
@@ -3118,7 +3118,7 @@ snapshots:
       yoctocolors: 2.2.0
       zod: 4.4.3
 
-  '@shipstatic/types@2.5.0-beta.22': {}
+  '@shipstatic/types@2.5.0-beta.23': {}
 
   '@sindresorhus/merge-streams@2.3.0': {}
 
