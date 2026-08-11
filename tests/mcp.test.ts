@@ -1,3 +1,4 @@
+import { DEPLOY_TOKEN } from '@shipstatic/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { onDidChangeMcpServers, registerMcpProvider } from '../src/mcp';
 import { createMockContext, lm, McpStdioServerDefinition, window } from './vscode.mock';
@@ -66,12 +67,17 @@ describe('mcp', () => {
     it('forwards a deploy token through the same slot', async () => {
       // The extension never classifies the credential — it carries whatever
       // the user stored, and the server decides what it is.
-      await ctx.secrets.store('shipstatic.token', `deploy-${'b'.repeat(64)}`);
+      await ctx.secrets.store(
+        'shipstatic.token',
+        `${DEPLOY_TOKEN.PREFIX}${'b'.repeat(DEPLOY_TOKEN.HEX_LENGTH)}`,
+      );
       const server = new McpStdioServerDefinition('ShipStatic', 'node', []);
 
       const resolved = await provider.resolveMcpServerDefinition(server);
 
-      expect(resolved.env.SHIP_TOKEN).toBe(`deploy-${'b'.repeat(64)}`);
+      expect(resolved.env.SHIP_TOKEN).toBe(
+        `${DEPLOY_TOKEN.PREFIX}${'b'.repeat(DEPLOY_TOKEN.HEX_LENGTH)}`,
+      );
     });
 
     it('starts without a token when none is stored', async () => {
