@@ -64,7 +64,7 @@ const DEPLOYED = {
   deployment: 'happy-cat-abc1234.shipstatic.com',
   url: 'https://happy-cat-abc1234.shipstatic.com',
 };
-const CLAIMABLE = { ...DEPLOYED, claim: 'https://my.shipstatic.com/claims/claim-abc123' };
+const CLAIMABLE = { ...DEPLOYED, claim: 'https://my.shipstatic.com/claim/abc123' };
 
 describe('commands', () => {
   let ctx: ReturnType<typeof createMockContext>;
