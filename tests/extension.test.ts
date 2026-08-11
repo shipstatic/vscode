@@ -1,3 +1,4 @@
+import { API_KEY } from '@shipstatic/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { activate, deactivate } from '../src/extension';
 import { _statusBarItem, commands, createMockContext, lm, window } from './vscode.mock';
@@ -6,7 +7,7 @@ vi.mock('@shipstatic/ship', () => ({ default: vi.fn() }));
 
 const KEY = 'shipstatic.token';
 const LEGACY_KEY = 'shipstatic.apiKey';
-const STORED = `ship-${'a'.repeat(64)}`;
+const STORED = `${API_KEY.PREFIX}${'a'.repeat(API_KEY.HEX_LENGTH)}`;
 
 /**
  * @file The activation wiring — what every other test file assumes has run.

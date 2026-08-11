@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import Ship from '@shipstatic/ship';
-import { ShipError } from '@shipstatic/types';
+import { API_KEY, ShipError } from '@shipstatic/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerCommands } from '../src/commands';
 import {
@@ -54,8 +54,9 @@ function shipReturning(instance: unknown) {
   } as unknown as (options: unknown) => Ship;
 }
 
-/** 69 chars — the validator in `setToken` is real, so prompts need real input. */
-const API_KEY = `ship-${'a'.repeat(64)}`;
+/** Built from the shape constants — `setToken`'s validator is real, so a
+ *  prompt needs input the platform would actually accept. */
+const TEST_API_KEY = `${API_KEY.PREFIX}${'a'.repeat(API_KEY.HEX_LENGTH)}`;
 const KEY = 'shipstatic.token';
 const LAST_PATH = 'shipstatic.lastDeployPath';
 
@@ -63,7 +64,7 @@ const DEPLOYED = {
   deployment: 'happy-cat-abc1234.shipstatic.com',
   url: 'https://happy-cat-abc1234.shipstatic.com',
 };
-const CLAIMABLE = { ...DEPLOYED, claim: 'https://my.shipstatic.com/claim/abc123' };
+const CLAIMABLE = { ...DEPLOYED, claim: 'https://my.shipstatic.com/claims/claim-abc123' };
 
 describe('commands', () => {
   let ctx: ReturnType<typeof createMockContext>;
@@ -110,13 +111,13 @@ describe('commands', () => {
 
   describe('setToken', () => {
     it('stores the token and fires the MCP change event', async () => {
-      window.showInputBox.mockResolvedValueOnce(API_KEY);
+      window.showInputBox.mockResolvedValueOnce(TEST_API_KEY);
       const { onDidChangeMcpServers } = await import('../src/mcp');
       const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
 
       await handlers.get('shipstatic.setToken')!();
 
-      expect(ctx.secrets.store).toHaveBeenCalledWith(KEY, API_KEY);
+      expect(ctx.secrets.store).toHaveBeenCalledWith(KEY, TEST_API_KEY);
       expect(fireSpy).toHaveBeenCalled();
     });
 
@@ -133,7 +134,7 @@ describe('commands', () => {
     it('resolves to nothing, so the credential cannot ride out on the command result', async () => {
       // Any extension can `executeCommand('shipstatic.setToken')`; returning
       // the stored secret to that caller would hand it out.
-      window.showInputBox.mockResolvedValueOnce(API_KEY);
+      window.showInputBox.mockResolvedValueOnce(TEST_API_KEY);
 
       await expect(handlers.get('shipstatic.setToken')!()).resolves.toBeUndefined();
     });
@@ -237,7 +238,7 @@ describe('commands', () => {
 
   describe('deploy', () => {
     it('deploys the picked folder and shows the URL', async () => {
-      await ctx.secrets.store(KEY, API_KEY);
+      await ctx.secrets.store(KEY, TEST_API_KEY);
       chooseFolder('dist');
       window.showInformationMessage.mockResolvedValueOnce('Copy URL');
       const upload = vi.fn().mockResolvedValue(DEPLOYED);
@@ -246,7 +247,7 @@ describe('commands', () => {
       await handlers.get('shipstatic.deploy')!();
 
       // One slot: the stored credential rides the `token` option, whatever it is.
-      expect(MockShip).toHaveBeenCalledWith({ token: API_KEY });
+      expect(MockShip).toHaveBeenCalledWith({ token: TEST_API_KEY });
       expect(upload).toHaveBeenCalledWith('/test/dist', { via: 'vsc' });
       expect(window.showInformationMessage).toHaveBeenCalledWith(
         'Deployed to https://happy-cat-abc1234.shipstatic.com',
@@ -327,7 +328,7 @@ describe('commands', () => {
     it('offers Set Token from the claimable deploy notification', async () => {
       chooseFolder('dist');
       window.showInformationMessage.mockResolvedValueOnce('Set Token');
-      window.showInputBox.mockResolvedValueOnce(API_KEY);
+      window.showInputBox.mockResolvedValueOnce(TEST_API_KEY);
       MockShip.mockImplementationOnce(
         shipReturning({ deployments: { upload: vi.fn().mockResolvedValue(CLAIMABLE) } }),
       );
@@ -336,7 +337,7 @@ describe('commands', () => {
 
       await handlers.get('shipstatic.deploy')!();
 
-      expect(ctx.secrets.store).toHaveBeenCalledWith(KEY, API_KEY);
+      expect(ctx.secrets.store).toHaveBeenCalledWith(KEY, TEST_API_KEY);
       expect(fireSpy).toHaveBeenCalled();
     });
 
@@ -431,10 +432,10 @@ describe('commands', () => {
       // for every other client. The claim flow already offered this on
       // anonymous SUCCESS; a present-but-rejected token was the one path that
       // knew exactly what was wrong and made the user go find the command.
-      await ctx.secrets.store(KEY, API_KEY);
+      await ctx.secrets.store(KEY, TEST_API_KEY);
       chooseFolder('dist');
       window.showErrorMessage.mockResolvedValueOnce('Set Token');
-      window.showInputBox.mockResolvedValueOnce(API_KEY);
+      window.showInputBox.mockResolvedValueOnce(TEST_API_KEY);
       MockShip.mockImplementationOnce(
         shipReturning({
           deployments: {
@@ -449,7 +450,7 @@ describe('commands', () => {
         'ShipStatic: Invalid API key',
         'Set Token',
       );
-      expect(ctx.secrets.store).toHaveBeenCalledWith(KEY, API_KEY);
+      expect(ctx.secrets.store).toHaveBeenCalledWith(KEY, TEST_API_KEY);
     });
 
     it('offers nothing extra for a failure the editor cannot fix', async () => {
@@ -468,7 +469,7 @@ describe('commands', () => {
     });
 
     it('reaches whoami too', async () => {
-      await ctx.secrets.store(KEY, API_KEY);
+      await ctx.secrets.store(KEY, TEST_API_KEY);
       window.showErrorMessage.mockResolvedValueOnce(undefined);
       MockShip.mockImplementationOnce(
         shipReturning({
@@ -485,7 +486,7 @@ describe('commands', () => {
     });
 
     it('does not prompt when the user dismisses the offer', async () => {
-      await ctx.secrets.store(KEY, API_KEY);
+      await ctx.secrets.store(KEY, TEST_API_KEY);
       chooseFolder('dist');
       window.showErrorMessage.mockResolvedValueOnce(undefined);
       MockShip.mockImplementationOnce(
@@ -504,7 +505,7 @@ describe('commands', () => {
 
   describe('whoami', () => {
     it('shows account info including custom domain usage (singular)', async () => {
-      await ctx.secrets.store(KEY, API_KEY);
+      await ctx.secrets.store(KEY, TEST_API_KEY);
       MockShip.mockImplementationOnce(
         shipReturning({
           whoami: vi.fn().mockResolvedValue({
@@ -517,14 +518,14 @@ describe('commands', () => {
 
       await handlers.get('shipstatic.whoami')!();
 
-      expect(MockShip).toHaveBeenCalledWith({ token: API_KEY });
+      expect(MockShip).toHaveBeenCalledWith({ token: TEST_API_KEY });
       expect(window.showInformationMessage).toHaveBeenCalledWith(
         'ShipStatic: test@example.com (standard) · 1 custom domain',
       );
     });
 
     it('shows account info with plural domain count', async () => {
-      await ctx.secrets.store(KEY, API_KEY);
+      await ctx.secrets.store(KEY, TEST_API_KEY);
       MockShip.mockImplementationOnce(
         shipReturning({
           whoami: vi.fn().mockResolvedValue({
@@ -543,7 +544,7 @@ describe('commands', () => {
     });
 
     it('shows zero domains as plural', async () => {
-      await ctx.secrets.store(KEY, API_KEY);
+      await ctx.secrets.store(KEY, TEST_API_KEY);
 
       await handlers.get('shipstatic.whoami')!();
 
@@ -553,7 +554,7 @@ describe('commands', () => {
     });
 
     it('falls back to its own sentence when what was thrown is not an Error', async () => {
-      await ctx.secrets.store(KEY, API_KEY);
+      await ctx.secrets.store(KEY, TEST_API_KEY);
       MockShip.mockImplementationOnce(shipReturning({ whoami: vi.fn().mockRejectedValue('nope') }));
 
       await handlers.get('shipstatic.whoami')!();
@@ -564,18 +565,18 @@ describe('commands', () => {
     });
 
     it('fires the MCP change event when a token is entered', async () => {
-      window.showInputBox.mockResolvedValueOnce(API_KEY);
+      window.showInputBox.mockResolvedValueOnce(TEST_API_KEY);
       const { onDidChangeMcpServers } = await import('../src/mcp');
       const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
 
       await handlers.get('shipstatic.whoami')!();
 
-      expect(ctx.secrets.store).toHaveBeenCalledWith(KEY, API_KEY);
+      expect(ctx.secrets.store).toHaveBeenCalledWith(KEY, TEST_API_KEY);
       expect(fireSpy).toHaveBeenCalled();
     });
 
     it('does not fire the MCP event when a token is already stored', async () => {
-      await ctx.secrets.store(KEY, API_KEY);
+      await ctx.secrets.store(KEY, TEST_API_KEY);
       const { onDidChangeMcpServers } = await import('../src/mcp');
       const fireSpy = vi.spyOn(onDidChangeMcpServers, 'fire');
 
