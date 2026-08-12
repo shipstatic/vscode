@@ -15,14 +15,14 @@ importers:
         specifier: ^1.30.0
         version: 1.30.0(zod@4.4.3)
       '@shipstatic/mcp':
-        specifier: 1.1.1-beta.1
-        version: 1.1.1-beta.1
+        specifier: 1.1.1-beta.2
+        version: 1.1.1-beta.2
       '@shipstatic/ship':
         specifier: 2.2.0-beta.1
         version: 2.2.0-beta.1
       '@shipstatic/types':
-        specifier: 2.7.0-beta.1
-        version: 2.7.0-beta.1
+        specifier: 2.7.0-beta.3
+        version: 2.7.0-beta.3
       '@types/node':
         specifier: ^20.19.43
         version: 20.19.43
@@ -808,8 +808,8 @@ packages:
     resolution: {integrity: sha512-Nqc90v4lWCXyakD6xNyNACBJNJ0tNCwj2WNk/7ivyacYHxiITVgmLUFXTBOeCdy79iz6HtN9Y31uw/jbLrdOAg==}
     engines: {node: '>=20.0.0'}
 
-  '@shipstatic/mcp@1.1.1-beta.1':
-    resolution: {integrity: sha512-+VvJj+MKCiQg8/R0ZTThZFAUFmmbFeHQa3Qz267zF+Y3JqdFoK6ttaYaBO0vL5r2rEpAfQkK99qUsgg/MTSacQ==}
+  '@shipstatic/mcp@1.1.1-beta.2':
+    resolution: {integrity: sha512-06/3tDOwGfzLG6sSfWTVXrw64wMQuU70WkBOX/mZxbtRTCgwHZTmRFeg95a7cq6fRbHavLljnWdj2ppozp7k4Q==}
     engines: {node: '>=20.0.0'}
     hasBin: true
 
@@ -818,8 +818,8 @@ packages:
     engines: {node: '>=20.0.0'}
     hasBin: true
 
-  '@shipstatic/types@2.7.0-beta.1':
-    resolution: {integrity: sha512-wYvDlAN8/+DXP1wgGlI+QEH0ofxBQubq6eoQlLP8DKVuhC6EAYRa/PJG6ZTG7vWX4t3w5E9HzoSdCaei5scyTQ==}
+  '@shipstatic/types@2.7.0-beta.3':
+    resolution: {integrity: sha512-136vImHAXaYJ8gC63krO9NDa/Enxu5KWZnmn5kW4X3uZkH2Pjq61oKwDd4E9arztddS1vEHxlAk0b7HhdEo72Q==}
     engines: {node: '>=20.0.0'}
 
   '@sindresorhus/merge-streams@2.3.0':
@@ -3096,11 +3096,11 @@ snapshots:
 
   '@secretlint/types@10.2.2': {}
 
-  '@shipstatic/mcp@1.1.1-beta.1':
+  '@shipstatic/mcp@1.1.1-beta.2':
     dependencies:
       '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
       '@shipstatic/ship': 2.2.0-beta.1
-      '@shipstatic/types': 2.7.0-beta.1
+      '@shipstatic/types': 2.7.0-beta.3
       zod: 4.4.3
     transitivePeerDependencies:
       - '@cfworker/json-schema'
@@ -3118,7 +3118,7 @@ snapshots:
       yoctocolors: 2.2.0
       zod: 4.4.3
 
-  '@shipstatic/types@2.7.0-beta.1': {}
+  '@shipstatic/types@2.7.0-beta.3': {}
 
   '@sindresorhus/merge-streams@2.3.0': {}
 
