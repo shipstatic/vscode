@@ -46,7 +46,7 @@ Plain **Deploy** never asks, so the common path stays a single pick.
 Without a token, deployments are public and expire in 3 days — the notification includes a claim link, so you can attach a site to an account after the fact. For permanent deployments:
 
 1. Get a free API key at [my.shipstatic.com/api-key](https://my.shipstatic.com/api-key)
-2. Run **ShipStatic: Set Token** from the command palette
+2. Run **ShipStatic: Set Token** from the command palette and paste it — the key *is* the token. One credential, two names: the console mints it as an *API key*, and every setting that carries it is called the *token*.
 
 One slot takes either credential the platform issues: a `ship-` API key or a `deploy-` deploy token. The extension never inspects which one you pasted — the server decides.
 
