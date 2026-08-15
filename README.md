@@ -67,7 +67,7 @@ Version 1.0 speaks the ShipStatic 2.x platform, and the credential vocabulary ch
 ## Links
 
 - [Website](https://shipstatic.com)
-- [MCP Server](https://www.npmjs.com/package/@shipstatic/mcp) — use ShipStatic tools in Claude Code, Cursor, Windsurf, Zed, Antigravity, and other MCP clients
+- [ShipStatic MCP](https://mcp.shipstatic.com) — the same tools in Claude Code, Cursor, Windsurf, Zed, Antigravity and any other MCP client: drop `https://mcp.shipstatic.com` into it, no install needed
 
 ## License
 
