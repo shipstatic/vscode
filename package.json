@@ -1,7 +1,7 @@
 {
   "name": "shipstatic",
   "displayName": "ShipStatic",
-  "description": "Free, no account needed — deploy static websites, landing pages, and prototypes instantly from chat or the command palette",
+  "description": "Free, no account needed \u2014 deploy static websites, landing pages, and prototypes instantly from chat or the command palette",
   "version": "1.0.0",
   "publisher": "shipstatic",
   "icon": "icon.png",
@@ -97,9 +97,9 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.5",
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "@shipstatic/mcp": "1.3.3",
-    "@shipstatic/ship": "2.3.3",
-    "@shipstatic/types": "2.10.0",
+    "@shipstatic/mcp": "1.3.4-beta.1",
+    "@shipstatic/ship": "2.3.4-beta.1",
+    "@shipstatic/types": "2.11.0-beta.1",
     "@types/node": "^20.19.43",
     "@types/vscode": "1.101.0",
     "@vitest/coverage-v8": "4.1.10",
