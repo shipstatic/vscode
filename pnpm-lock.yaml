@@ -15,14 +15,14 @@ importers:
         specifier: ^1.30.0
         version: 1.30.0(zod@4.4.3)
       '@shipstatic/mcp':
-        specifier: 1.3.4-beta.1
-        version: 1.3.4-beta.1
+        specifier: 1.3.5-beta.1
+        version: 1.3.5-beta.1
       '@shipstatic/ship':
-        specifier: 2.3.4-beta.1
-        version: 2.3.4-beta.1
+        specifier: 2.3.5-beta.1
+        version: 2.3.5-beta.1
       '@shipstatic/types':
-        specifier: 2.11.0-beta.1
-        version: 2.11.0-beta.1
+        specifier: 2.12.0-beta.1
+        version: 2.12.0-beta.1
       '@types/node':
         specifier: ^20.19.43
         version: 20.19.43
@@ -808,18 +808,18 @@ packages:
     resolution: {integrity: sha512-Nqc90v4lWCXyakD6xNyNACBJNJ0tNCwj2WNk/7ivyacYHxiITVgmLUFXTBOeCdy79iz6HtN9Y31uw/jbLrdOAg==}
     engines: {node: '>=20.0.0'}
 
-  '@shipstatic/mcp@1.3.4-beta.1':
-    resolution: {integrity: sha512-w9sfcXb98WQZtX2IS1rgmJLQ35AqGQJPHk3vnWxEoofshBs82xn38NWTigZxQYZFPT2bqsGUJMI1PVec3buHQA==}
+  '@shipstatic/mcp@1.3.5-beta.1':
+    resolution: {integrity: sha512-Aud2/O+Xw5lvKuNQPUg/FpJCAvbE1bpY0mrrH0NsQHko3wU6eMTy9jwuDJsLc5rJM6h5w20IIcrtmme3qaVy1w==}
     engines: {node: '>=20.19.0'}
     hasBin: true
 
-  '@shipstatic/ship@2.3.4-beta.1':
-    resolution: {integrity: sha512-WzCMB6MvLiSB/eZGwrZCYsEC9yHNM1Clu3Vk8O5WgV1Jl1AleaQpHm613FGYNSewU13rzVLgPxHPrFa05ZmCuA==}
+  '@shipstatic/ship@2.3.5-beta.1':
+    resolution: {integrity: sha512-/bnssjy+TY2WWT2hsFSDNx8GQWP/n9lai/Erm5WAL0aFemrGyXq/H/QJlAXhUveDjODGf9iNX/njk9fpoyZ2hg==}
     engines: {node: '>=20.19.0'}
     hasBin: true
 
-  '@shipstatic/types@2.11.0-beta.1':
-    resolution: {integrity: sha512-xxyBx0pYbDiYh7dsInVl+MxiJf20JkyG9kb+ZqAS5NA26yuKEYpDzj37mvu4PfW1UjmA3k9aM2U/71wSEGU0Tg==}
+  '@shipstatic/types@2.12.0-beta.1':
+    resolution: {integrity: sha512-9T45l2mQq2rTqoXNQ1ElX9G8oBuV01bFOyOg0ldMAtXsi5liRMzYK4OvrXXc3Pa2VOM5KBwkj6uc8O/7oFWOYQ==}
     engines: {node: '>=20.19.0'}
 
   '@sindresorhus/merge-streams@2.3.0':
@@ -3062,23 +3062,23 @@ snapshots:
 
   '@secretlint/types@10.2.2': {}
 
-  '@shipstatic/mcp@1.3.4-beta.1':
+  '@shipstatic/mcp@1.3.5-beta.1':
     dependencies:
       '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
-      '@shipstatic/ship': 2.3.4-beta.1
-      '@shipstatic/types': 2.11.0-beta.1
+      '@shipstatic/ship': 2.3.5-beta.1
+      '@shipstatic/types': 2.12.0-beta.1
       zod: 4.4.3
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - supports-color
 
-  '@shipstatic/ship@2.3.4-beta.1':
+  '@shipstatic/ship@2.3.5-beta.1':
     dependencies:
       junk: 4.0.1
       spark-md5: 3.0.2
       zod: 4.4.3
 
-  '@shipstatic/types@2.11.0-beta.1': {}
+  '@shipstatic/types@2.12.0-beta.1': {}
 
   '@sindresorhus/merge-streams@2.3.0': {}
 
