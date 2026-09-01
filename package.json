@@ -23,7 +23,8 @@
     "theme": "dark"
   },
   "categories": [
-    "AI"
+    "AI",
+    "Chat"
   ],
   "keywords": [
     "shipstatic",

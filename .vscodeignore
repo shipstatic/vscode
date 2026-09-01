@@ -9,11 +9,13 @@
 # describing internal tooling. It also still excluded `.husky/**`, which has not
 # existed here for months.
 #
-# Six lines is the whole extension: the manifest, the listing, the licence, the
-# icon, and the two bundles. `vsce ls` is the check.
+# Seven lines is the whole extension: the manifest, the listing, the changelog
+# (the Marketplace renders it as its own tab), the licence, the icon, and the
+# two bundles. `vsce ls` is the check.
 **
 !package.json
 !README.md
+!CHANGELOG.md
 !LICENSE
 !icon.png
 !dist/extension.js
