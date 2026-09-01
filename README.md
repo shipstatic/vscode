@@ -35,7 +35,7 @@ That's it. Your site is live instantly.
 
 From the palette or the status bar, **Deploy** offers the folder you deployed last, then any build output it finds (`dist`, `build`, `out`, `public`, `_site`) — so repeat deploys are a single keypress.
 
-### Password Protection
+### Password protection
 
 Want a private site? Run **ShipStatic: Deploy with Password** instead — same flow, plus one prompt (6–128 characters). Visitors must unlock before viewing, on the deployment URL and on any custom domains pointing at it. In agent mode, just ask: *"deploy with password hunter2"*.
 
