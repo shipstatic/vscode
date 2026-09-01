@@ -4,7 +4,7 @@ Deploy static websites, landing pages, and prototypes instantly — ask your AI 
 
 [ShipStatic](https://shipstatic.com) is static hosting without the complexity. No build steps, no framework lock-in — upload your files and get a live URL.
 
-## Chat with Your AI
+## Chat with your AI
 
 This extension adds 15 ShipStatic tools via MCP. Just ask:
 
@@ -26,7 +26,7 @@ All tools are available in agent mode automatically — no manual MCP configurat
 
 A **deploy button** in the status bar provides one-click deployments.
 
-## Getting Started
+## Getting started
 
 1. Install the extension
 2. Open the chat and ask to deploy your project
@@ -64,10 +64,16 @@ Version 1.0 speaks the ShipStatic 2.x platform, and the credential vocabulary ch
 
 - VS Code 1.101 or later
 
-## Links
+## Also available
 
-- [Website](https://shipstatic.com)
-- [ShipStatic MCP](https://mcp.shipstatic.com) — the same tools in Claude Code, Cursor, Windsurf, Zed, Antigravity and any other MCP client: drop `https://mcp.shipstatic.com` into it, no install needed
+| Surface | Reach it |
+|---------|----------|
+| **[MCP](https://mcp.shipstatic.com)** | Drop `https://mcp.shipstatic.com` into any MCP client |
+| **[CLI and SDK](https://github.com/shipstatic/ship)** | `npx @shipstatic/ship ./dist` |
+| **[Gemini CLI](https://github.com/shipstatic/plugin)** | `gemini extensions install https://github.com/shipstatic/plugin` |
+| **[n8n](https://www.npmjs.com/package/n8n-nodes-shipstatic)** | Search "ShipStatic" in n8n's node panel |
+| **[GitHub Action](https://github.com/shipstatic/action)** | `shipstatic/action@v2` |
+| **[Agent Skill](https://www.shipstatic.com/SKILL.md)** | One file, for any skills-aware tool |
 
 ## License
 
