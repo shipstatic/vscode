@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.3 (2026-09-13)
+
+- Bundles `@shipstatic/mcp` 1.11.0: every tool's annotations come from one
+  registry row per tool, so reads are closed-world, a replace is destructive
+  and only the two deletes promise a free retry; descriptions describe the
+  tool rather than instruct the model; `whoami` returns exactly the email,
+  name, plan, usage and caps its description names. No functional change to
+  the extension's own commands.
+
 ## 1.0.2 (2026-09-02)
 
 - Listing copy follows the platform canon (heading case). No functional change.
