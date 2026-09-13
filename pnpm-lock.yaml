@@ -15,14 +15,14 @@ importers:
         specifier: ^1.30.0
         version: 1.30.0(zod@4.4.3)
       '@shipstatic/mcp':
-        specifier: 1.11.0
-        version: 1.11.0
+        specifier: 1.12.0-beta.1
+        version: 1.12.0-beta.1
       '@shipstatic/ship':
         specifier: 2.9.2
         version: 2.9.2
       '@shipstatic/types':
-        specifier: 2.24.0
-        version: 2.24.0
+        specifier: 2.25.0-beta.1
+        version: 2.25.0-beta.1
       '@types/node':
         specifier: ^20.19.43
         version: 20.19.43
@@ -808,8 +808,8 @@ packages:
     resolution: {integrity: sha512-Nqc90v4lWCXyakD6xNyNACBJNJ0tNCwj2WNk/7ivyacYHxiITVgmLUFXTBOeCdy79iz6HtN9Y31uw/jbLrdOAg==}
     engines: {node: '>=20.0.0'}
 
-  '@shipstatic/mcp@1.11.0':
-    resolution: {integrity: sha512-P//m7OGoSbeVLAk/PbAxyT7S74qAFSPUfL5ciPL1QmFHjlyJCpLFNf0krr6R07sLQCVHwoz1prP/dHCIuH+Jpw==}
+  '@shipstatic/mcp@1.12.0-beta.1':
+    resolution: {integrity: sha512-Y6kPHfuI/BiqCTbNs7UBQY5UG+BGEN56InMcZ7SgxToWV7z5Hmj/8JMvyZfCF566UK73icwmUx1rg8o6KC4liw==}
     engines: {node: '>=20.19.0'}
     hasBin: true
 
@@ -818,8 +818,8 @@ packages:
     engines: {node: '>=20.19.0'}
     hasBin: true
 
-  '@shipstatic/types@2.24.0':
-    resolution: {integrity: sha512-Qa2QGqUYR/NrTxEOLUeNEwTHpK49tfd4Lh3mq3+NdEVaiXN8kBeD8CDE4cQjb1HWWi5aOqbW8WXyx6TBZfjzBw==}
+  '@shipstatic/types@2.25.0-beta.1':
+    resolution: {integrity: sha512-lretDZSBWAdrLtwHzHlrcXSEnaREv/ZOWpdzrHzl2K3GA4rjmglyCLlsSXB/KMthfZgz1aCBK+e3ld22tnvoTA==}
     engines: {node: '>=20.19.0'}
 
   '@sindresorhus/merge-streams@2.3.0':
@@ -3062,11 +3062,11 @@ snapshots:
 
   '@secretlint/types@10.2.2': {}
 
-  '@shipstatic/mcp@1.11.0':
+  '@shipstatic/mcp@1.12.0-beta.1':
     dependencies:
       '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
       '@shipstatic/ship': 2.9.2
-      '@shipstatic/types': 2.24.0
+      '@shipstatic/types': 2.25.0-beta.1
       zod: 4.4.3
     transitivePeerDependencies:
       - '@cfworker/json-schema'
@@ -3078,7 +3078,9 @@ snapshots:
       spark-md5: 3.0.2
       zod: 4.4.3
 
-  '@shipstatic/types@2.24.0': {}
+  '@shipstatic/types@2.25.0-beta.1':
+    dependencies:
+      zod: 4.4.3
 
   '@sindresorhus/merge-streams@2.3.0': {}
 
