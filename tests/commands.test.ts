@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import Ship from '@shipstatic/ship';
 import { API_KEY, ShipError } from '@shipstatic/types';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerCommands } from '../src/commands';
 import {
   type CommandHandler,
@@ -64,7 +64,13 @@ const DEPLOYED = {
   deployment: 'happy-cat-abc1234.shipstatic.com',
   url: 'https://happy-cat-abc1234.shipstatic.com',
 };
-const CLAIMABLE = { ...DEPLOYED, claim: 'https://my.shipstatic.com/claim/abc123' };
+const NOW = 1_800_000_000;
+const CLAIMABLE = {
+  ...DEPLOYED,
+  created: NOW,
+  expires: NOW + 3 * 86_400,
+  claim: 'https://my.shipstatic.com/claim/abc123',
+};
 
 describe('commands', () => {
   let ctx: ReturnType<typeof createMockContext>;
@@ -84,6 +90,10 @@ describe('commands', () => {
   /** The labels the picker offered, in order. */
   const offered = () =>
     window.showQuickPick.mock.calls[0][0].map((i: { label: string }) => i.label);
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   beforeEach(() => {
     ctx = createMockContext();
@@ -305,6 +315,7 @@ describe('commands', () => {
     });
 
     it('deploys anonymously with no token and shows the claim expiry', async () => {
+      vi.useFakeTimers({ now: (NOW + 1) * 1000, toFake: ['Date'] });
       chooseFolder('dist');
       window.showInformationMessage.mockResolvedValueOnce(undefined);
       MockShip.mockImplementationOnce(
@@ -318,7 +329,27 @@ describe('commands', () => {
       // one through `POST /tokens/agent`, which the 2.x API deleted.
       expect(MockShip).toHaveBeenCalledWith({ token: undefined });
       expect(window.showInformationMessage).toHaveBeenCalledWith(
-        'Deployed to https://happy-cat-abc1234.shipstatic.com — expires in 3 days',
+        'Deployed to https://happy-cat-abc1234.shipstatic.com. Expires in 3 days.',
+        'Open in Browser',
+        'Copy URL',
+        'Set Token',
+      );
+    });
+
+    it('states the time the deployment has left, not the anonymous lifetime', async () => {
+      // A lease two days into its three: the old notification quoted the
+      // tier's fixed "3 days" whatever the deployment said.
+      vi.useFakeTimers({ now: (NOW + 2 * 86_400) * 1000, toFake: ['Date'] });
+      chooseFolder('dist');
+      window.showInformationMessage.mockResolvedValueOnce(undefined);
+      MockShip.mockImplementationOnce(
+        shipReturning({ deployments: { upload: vi.fn().mockResolvedValue(CLAIMABLE) } }),
+      );
+
+      await handlers.get('shipstatic.deploy')!();
+
+      expect(window.showInformationMessage).toHaveBeenCalledWith(
+        'Deployed to https://happy-cat-abc1234.shipstatic.com. Expires in 24 hours.',
         'Open in Browser',
         'Copy URL',
         'Set Token',

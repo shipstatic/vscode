@@ -1,26 +1,30 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { PUBLIC_EXPIRY } from '@shipstatic/mcp';
 import Ship from '@shipstatic/ship';
-import { ErrorType, isShipError, PASSWORD_CONSTRAINTS } from '@shipstatic/types';
+import {
+  ErrorType,
+  formatTimeRemaining,
+  isShipError,
+  PASSWORD_CONSTRAINTS,
+} from '@shipstatic/types';
 import * as vscode from 'vscode';
 import { getToken, setToken } from './auth';
 import { onDidChangeMcpServers } from './mcp';
 
 /**
- * The anonymous-deploy lifetime is QUOTED, never authored here.
+ * The anonymous-deploy lifetime, as the listing states it, is QUOTED, never
+ * authored here.
  *
  * `@shipstatic/types` owns the number (`PUBLIC_DEPLOYMENT_TTL_SECONDS`) and
  * `@shipstatic/mcp`'s vocabulary authors the one English phrase derived from
- * it — the phrase both transports, the bundled server's instructions, and this
- * palette notification all speak. One owner is the entire point: this file
- * carried its own derivation of the same expression once, which is two
- * statements of one sentence in two repos, and exactly the drift class the
- * vocabulary module exists to delete.
+ * it, the phrase both transports and the bundled server's instructions speak.
+ * This file once carried its own derivation of the same expression, which is
+ * two statements of one sentence in two repos.
  *
- * Re-exported for `tests/docs-contract.test.ts`, which holds the published
- * listing to the phrase THIS surface actually shows — the fence reads
- * production's own value, not a copy of it.
+ * The deploy notification no longer quotes it (2026-09-17): it states the time
+ * the deployment it just made has LEFT, the way every surface reads a
+ * deadline. Re-exported for `tests/docs-contract.test.ts`, which holds the
+ * published listing's policy sentence to the vocabulary's value.
  */
 export { PUBLIC_EXPIRY } from '@shipstatic/mcp';
 
@@ -176,8 +180,12 @@ async function deploy(context: vscode.ExtensionContext, withPassword: boolean) {
     const actions: string[] = ['Open in Browser', 'Copy URL'];
     if (result.claim) actions.push(SET_TOKEN);
 
+    // Gated on the deadline itself rather than on the claim, and read the
+    // platform's one way (`formatTimeRemaining`): the time left, as the
+    // deploy card and the CLI say it about the same deployment.
+    const remaining = result.expires ? formatTimeRemaining(result.expires) : null;
     const action = await vscode.window.showInformationMessage(
-      result.claim ? `Deployed to ${url} — expires in ${PUBLIC_EXPIRY}` : `Deployed to ${url}`,
+      remaining ? `Deployed to ${url}. Expires in ${remaining}.` : `Deployed to ${url}`,
       ...actions,
     );
 
