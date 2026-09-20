@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.4 (2026-09-20)
+
+- Bundles `@shipstatic/mcp` 2.0.0: a domain's `status` is now the one word
+  saying what it needs from you (`live`, `unlinked`, `unverified`, `paused`)
+  rather than a DNS state, and the DNS fact moved to `verification` beside it.
+  An agent reading a domain gets the answer directly instead of working it out
+  from the other fields. No functional change to the extension's own commands.
+
 ## 1.0.3 (2026-09-13)
 
 - Bundles `@shipstatic/mcp` 1.11.0: every tool's annotations come from one
