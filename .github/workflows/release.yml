@@ -304,7 +304,25 @@ jobs:
         if: needs.version.outputs.marketplace != 'true' && env.VSCE_PAT != ''
         # The channel flag precedes `--packagePath`, which is VARIADIC — a trailing
         # flag would be read as another package path on some parser versions.
-        run: pnpm exec vsce publish ${{ needs.version.outputs.flag }} --packagePath "${{ needs.version.outputs.vsix }}"
+        #
+        # Bounded retry: a storefront can answer a transient 5xx, and one did
+        # (Open VSX, v1.0.3, left six days behind). After a failure the version
+        # is looked up first, so a publish that landed just before an error is
+        # never retried into a "version exists" refusal.
+        run: |
+          for attempt in 1 2 3; do
+            if pnpm exec vsce publish ${{ needs.version.outputs.flag }} --packagePath "${{ needs.version.outputs.vsix }}"; then exit 0; fi
+            if curl -sf -X POST 'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery' \
+                 -H 'Content-Type: application/json' \
+                 -H 'Accept: application/json;api-version=3.0-preview.1' \
+                 -d '{"filters":[{"criteria":[{"filterType":7,"value":"${{ needs.version.outputs.extension }}"}]}],"flags":1}' \
+               | jq -e --arg v "${{ needs.version.outputs.version }}" '[.results[0].extensions[0].versions[]?.version] | index($v)' >/dev/null 2>&1; then
+              echo "::notice title=Marketplace::the version landed despite the error; nothing to retry."
+              exit 0
+            fi
+            [ "$attempt" -lt 3 ] && sleep $((attempt * 30))
+          done
+          exit 1
 
   openvsx:
     needs: [version, build]
@@ -345,4 +363,15 @@ jobs:
 
       - name: Publish to Open VSX
         if: needs.version.outputs.openvsx != 'true' && env.OVSX_PAT != ''
-        run: pnpm exec ovsx publish "${{ needs.version.outputs.vsix }}" ${{ needs.version.outputs.flag }} -p "$OVSX_PAT"
+        # Bounded retry, on the same terms as the Marketplace's above.
+        run: |
+          EXTENSION="${{ needs.version.outputs.extension }}"
+          for attempt in 1 2 3; do
+            if pnpm exec ovsx publish "${{ needs.version.outputs.vsix }}" ${{ needs.version.outputs.flag }} -p "$OVSX_PAT"; then exit 0; fi
+            if curl -sf -o /dev/null "https://open-vsx.org/api/${EXTENSION%%.*}/${EXTENSION#*.}/${{ needs.version.outputs.version }}"; then
+              echo "::notice title=Open VSX::the version landed despite the error; nothing to retry."
+              exit 0
+            fi
+            [ "$attempt" -lt 3 ] && sleep $((attempt * 30))
+          done
+          exit 1
