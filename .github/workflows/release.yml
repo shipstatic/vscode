@@ -14,11 +14,35 @@
 #                                    Derived, never hand-picked.
 #   the branch grants the right    → the TAG grants it, so the tag and the
 #                                    manifest must agree. Asserted first.
-#   trusted publishing (no secret) → no equivalent exists. Nearest posture: the
-#                                    two PATs live in a `marketplace`
-#                                    environment whose deployment policy admits
-#                                    only `v*` tags, so no other ref can reach
-#                                    them.
+#   trusted publishing (no secret) → no equivalent exists. Nearest posture: one
+#                                    PAT per storefront, each in its own
+#                                    environment (`marketplace`, `open-vsx`)
+#                                    whose deployment policy admits only `v*`
+#                                    tags, so no other ref can reach it.
+#                                    READ THIS BEFORE TRUSTING IT: the two
+#                                    environments exist and the jobs below
+#                                    declare them, but the PAT VALUES still sit
+#                                    at REPO level, where any workflow can read
+#                                    them without declaring an environment. The
+#                                    tag policy therefore gates the JOB and not
+#                                    yet the SECRET. Only the operator holds the
+#                                    values, so only the operator can close it;
+#                                    root `backlog.md` carries the two commands.
+#                                    Until then this line describes the shape,
+#                                    not the state.
+#   one job, one credential        → the npm law's tail, applied here. `build`
+#                                    holds the OIDC grant and nothing else;
+#                                    `release` holds `contents: write` alone;
+#                                    each storefront publishes from its own job
+#                                    with its own PAT. No third-party action
+#                                    runs beside any of them. Before 2026-09-23
+#                                    all of it lived in ONE job: the OIDC grant,
+#                                    `contents: write`, both PATs, and a
+#                                    third-party release action beside them. It
+#                                    also meant a 503 from one storefront left a
+#                                    half-published release under a single red
+#                                    job, which is how 1.0.3 reached the
+#                                    Marketplace and never reached Open VSX.
 #   idempotent publishes           → query each registry for the version first.
 #   a skip says so                 → `::notice`, never silence.
 #   provenance attestations        → `actions/attest-build-provenance` over the
@@ -144,35 +168,25 @@ jobs:
             echo "openvsx=$OPENVSX"
           } >> "$GITHUB_OUTPUT"
 
-  publish:
+  # ─── The tail, on the npm law's own split: one job, one credential ───────
+  #
+  # `build` mints the attestation, so it holds `id-token: write` — a job-scoped
+  # grant any step in the job could use. That is why it runs FIRST-PARTY steps
+  # only and holds nothing else: no `contents: write`, no PAT, no environment.
+  # The `.vsix` it attests is handed on as a workflow artifact, so every job
+  # below publishes the exact bytes the attestation is about.
+  build:
     needs: [test, version]
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # The nearest thing this registry has to trusted publishing: the two PATs
-    # live ONLY in this environment, and its deployment policy admits only `v*`
-    # tags. A workflow on any other ref cannot reach a credential that is not
-    # there. (Repo-level secrets are reachable by any workflow without
-    # declaring an environment, which is what makes the scoping load-bearing
-    # rather than tidy.)
-    environment: marketplace
     permissions:
-      contents: write
-      # The attestation is signed through GitHub's OIDC identity — the same
-      # trust root npm's `--provenance` uses, which is why this is a
-      # translation rather than a substitute.
+      contents: read
       id-token: write
       attestations: write
-    env:
-      # Job level, not step level, and that is a fix rather than a style
-      # choice: a step's `if:` cannot read that step's own `env:` block, so the
-      # previous `if: env.VSCE_PAT != ''` guards were evaluating against an
-      # unset value and skipping BOTH publishes on every run — a green release
-      # that published nothing, silently. Which is also why the skips below are
-      # notices.
-      VSCE_PAT: ${{ secrets.VSCE_PAT }}
-      OVSX_PAT: ${{ secrets.OVSX_PAT }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
@@ -188,30 +202,103 @@ jobs:
       # channel — the flag is not re-decided at publish time.
       - run: pnpm exec vsce package ${{ needs.version.outputs.flag }} --out dist/
 
-      # Signed provenance for the exact bytes that go to both registries and to
-      # the Release. Before the upload, so a Release can never carry an
-      # unattested artifact.
+      # Signed provenance for the exact bytes every job below will ship.
       - uses: actions/attest-build-provenance@v4
         with:
           subject-path: ${{ needs.version.outputs.vsix }}
 
-      # The artifact trail: the `.vsix` a user can compare against what the
-      # Marketplace served them, now with an attestation to check it against.
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+      - uses: actions/upload-artifact@v7
         with:
-          files: ${{ needs.version.outputs.vsix }}
-          prerelease: ${{ needs.version.outputs.channel == 'pre-release' }}
-          generate_release_notes: true
-          fail_on_unmatched_files: true
+          name: vsix
+          path: ${{ needs.version.outputs.vsix }}
+          if-no-files-found: error
+          retention-days: 7
 
-      - name: Marketplace — already published
+  # `contents: write` alone, and `gh` talks to the API — the same posture the
+  # npm law's release job takes. It was `softprops/action-gh-release`, which is
+  # third-party code that used to run beside the OIDC grant.
+  release:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: vsix
+          path: dist/
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.version.outputs.version }}"
+          PRERELEASE=""
+          [ "${{ needs.version.outputs.channel }}" = "pre-release" ] && PRERELEASE="--prerelease"
+          # Idempotent like every other step here: a re-run after a storefront
+          # failure must not fail on the Release that already exists.
+          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::notice title=Release exists::v$VERSION is already a GitHub Release. Re-uploading the .vsix."
+            gh release upload "v$VERSION" "${{ needs.version.outputs.vsix }}" \
+              --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "v$VERSION" "${{ needs.version.outputs.vsix }}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "v$VERSION" \
+              --generate-notes \
+              $PRERELEASE
+          fi
+
+  # One storefront, one job, one PAT. They were two steps in one job, which is
+  # why a 503 from Open VSX on the v1.0.3 release presented as a single red job
+  # that did not say the Marketplace half had already succeeded. Split, a
+  # failure names its own storefront and "Re-run failed jobs" repairs exactly
+  # that half — the publish law's own repair, now applicable here.
+  marketplace:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: marketplace
+    permissions: {}
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+    steps:
+      - name: Already published
         if: needs.version.outputs.marketplace == 'true'
         run: echo "::notice title=Marketplace skipped::${{ needs.version.outputs.extension }} ${{ needs.version.outputs.version }} is already on the Visual Studio Marketplace. Re-running a published tag is a no-op."
 
-      - name: Marketplace — no credential
+      - name: No credential
         if: needs.version.outputs.marketplace != 'true' && env.VSCE_PAT == ''
-        run: echo "::notice title=Marketplace skipped::VSCE_PAT is not set on the 'marketplace' environment, so nothing was published to the Visual Studio Marketplace."
+        run: echo "::notice title=Marketplace skipped::VSCE_PAT is not readable from the 'marketplace' environment, so nothing was published to the Visual Studio Marketplace."
+
+      # The publishing tool comes from the LOCKFILE, so the version that ships
+      # an artifact is the one the repo resolved and a bot can bump. Hardcoding
+      # it in the workflow would be a second statement of the same fact with
+      # nothing comparing them. The checkout that makes that possible carries
+      # `persist-credentials: false`, so the only credential in this job is the
+      # one storefront PAT.
+      - uses: actions/checkout@v7
+        if: needs.version.outputs.marketplace != 'true' && env.VSCE_PAT != ''
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+        if: needs.version.outputs.marketplace != 'true' && env.VSCE_PAT != ''
+      - uses: actions/setup-node@v7
+        if: needs.version.outputs.marketplace != 'true' && env.VSCE_PAT != ''
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: needs.version.outputs.marketplace != 'true' && env.VSCE_PAT != ''
+
+      - uses: actions/download-artifact@v8
+        if: needs.version.outputs.marketplace != 'true' && env.VSCE_PAT != ''
+        with:
+          name: vsix
+          path: dist/
 
       - name: Publish to VS Code Marketplace
         if: needs.version.outputs.marketplace != 'true' && env.VSCE_PAT != ''
@@ -219,13 +306,42 @@ jobs:
         # flag would be read as another package path on some parser versions.
         run: pnpm exec vsce publish ${{ needs.version.outputs.flag }} --packagePath "${{ needs.version.outputs.vsix }}"
 
-      - name: Open VSX — already published
+  openvsx:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: open-vsx
+    permissions: {}
+    env:
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+    steps:
+      - name: Already published
         if: needs.version.outputs.openvsx == 'true'
         run: echo "::notice title=Open VSX skipped::${{ needs.version.outputs.extension }} ${{ needs.version.outputs.version }} is already on Open VSX. Re-running a published tag is a no-op."
 
-      - name: Open VSX — no credential
+      - name: No credential
         if: needs.version.outputs.openvsx != 'true' && env.OVSX_PAT == ''
-        run: echo "::notice title=Open VSX skipped::OVSX_PAT is not set on the 'marketplace' environment, so nothing was published to Open VSX."
+        run: echo "::notice title=Open VSX skipped::OVSX_PAT is not readable from the 'open-vsx' environment, so nothing was published to Open VSX."
+
+      - uses: actions/checkout@v7
+        if: needs.version.outputs.openvsx != 'true' && env.OVSX_PAT != ''
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+        if: needs.version.outputs.openvsx != 'true' && env.OVSX_PAT != ''
+      - uses: actions/setup-node@v7
+        if: needs.version.outputs.openvsx != 'true' && env.OVSX_PAT != ''
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: needs.version.outputs.openvsx != 'true' && env.OVSX_PAT != ''
+
+      - uses: actions/download-artifact@v8
+        if: needs.version.outputs.openvsx != 'true' && env.OVSX_PAT != ''
+        with:
+          name: vsix
+          path: dist/
 
       - name: Publish to Open VSX
         if: needs.version.outputs.openvsx != 'true' && env.OVSX_PAT != ''
