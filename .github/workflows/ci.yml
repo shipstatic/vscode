@@ -19,8 +19,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
       - uses: actions/checkout@v7
 
@@ -67,11 +65,21 @@ jobs:
       # display; `xvfb-run` provides one.
       - run: xvfb-run -a pnpm test:host
 
-      # Activates once the SLACK_WEBHOOK_URL secret is set on this repo.
-      - if: failure() && env.SLACK_WEBHOOK_URL != ''
-        uses: slackapi/slack-github-action@v4
-        with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          webhook-type: incoming-webhook
-          payload: |
-            text: "🔴 vscode CI failed on ${{ github.ref_name }}"
+  # A red run on a push or a schedule reaches the operator's alerts channel; a
+  # pull request's red already has a reader, its author. The webhook lives in
+  # this job alone, which runs nothing but curl, and an unset secret fails the
+  # job rather than skipping it. Root CLAUDE.md, "CI notifications".
+  notify:
+    needs: [test]
+    if: failure() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Post to the alerts channel
+        env:
+          ALERTS_WEBHOOK: ${{ secrets.ALERTS_WEBHOOK }}
+        run: |
+          MESSAGE="🔴 vscode CI failed on $GITHUB_REF_NAME"
+          [ -n "$ALERTS_WEBHOOK" ] || { echo "::error::ALERTS_WEBHOOK is not set on this repository, so this outcome reached nobody"; exit 1; }
+          curl --fail-with-body -sS --form-string "content=$MESSAGE <$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID>" "$ALERTS_WEBHOOK"

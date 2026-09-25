@@ -375,3 +375,32 @@ jobs:
             [ "$attempt" -lt 3 ] && sleep $((attempt * 30))
           done
           exit 1
+
+  # A failed release reaches the operator's alerts channel, naming the jobs
+  # that failed. Success is not announced: a storefront job also succeeds
+  # when it publishes nothing (the version is already there, or its PAT is
+  # not readable), so "published" would sometimes be false. The webhook lives
+  # in this job alone, which runs nothing but curl, and an unset secret fails
+  # the job rather than skipping it. Root CLAUDE.md, "CI notifications".
+  notify:
+    needs: [test, version, build, release, marketplace, openvsx]
+    if: failure() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Post to the alerts channel
+        env:
+          ALERTS_WEBHOOK: ${{ secrets.ALERTS_WEBHOOK }}
+          RESULTS: >-
+            test=${{ needs.test.result }}
+            version=${{ needs.version.result }}
+            build=${{ needs.build.result }}
+            release=${{ needs.release.result }}
+            marketplace=${{ needs.marketplace.result }}
+            openvsx=${{ needs.openvsx.result }}
+        run: |
+          FAILED=$(tr ' ' '\n' <<<"$RESULTS" | grep -E '=(failure|cancelled)$' | cut -d= -f1 | paste -sd, - | sed 's/,/, /g')
+          MESSAGE="🔴 vscode release $GITHUB_REF_NAME failed in: $FAILED. Repair: Re-run failed jobs on this run."
+          [ -n "$ALERTS_WEBHOOK" ] || { echo "::error::ALERTS_WEBHOOK is not set on this repository, so this outcome reached nobody"; exit 1; }
+          curl --fail-with-body -sS --form-string "content=$MESSAGE <$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID>" "$ALERTS_WEBHOOK"
