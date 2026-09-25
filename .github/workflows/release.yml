@@ -376,18 +376,22 @@ jobs:
           done
           exit 1
 
-  # A failed release reaches the operator's alerts channel, naming the jobs
-  # that failed. Success is not announced: a storefront job also succeeds
-  # when it publishes nothing (the version is already there, or its PAT is
-  # not readable), so "published" would sometimes be false. The webhook lives
-  # in this job alone, which runs nothing but curl, and an unset secret fails
-  # the job rather than skipping it. Root CLAUDE.md, "CI notifications".
+  # A failed release reaches the operator's alerts channel for production,
+  # since a tag is a release, naming the jobs that failed. Success is not
+  # announced: a storefront job also succeeds when it publishes nothing (the
+  # version is already there, or its PAT is not readable), so "published"
+  # would sometimes be false. The webhook is a secret of that environment, so
+  # only this job can read it. It runs nothing but curl, and an unset secret
+  # fails it rather than skipping it. Root CLAUDE.md, "CI notifications".
   notify:
     needs: [test, version, build, release, marketplace, openvsx]
     if: failure() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions: {}
+    environment:
+      name: production
+      deployment: false
     steps:
       - name: Post to the alerts channel
         env:
@@ -402,5 +406,5 @@ jobs:
         run: |
           FAILED=$(tr ' ' '\n' <<<"$RESULTS" | grep -E '=(failure|cancelled)$' | cut -d= -f1 | paste -sd, - | sed 's/,/, /g')
           MESSAGE="🔴 vscode release $GITHUB_REF_NAME failed in: $FAILED. Repair: Re-run failed jobs on this run."
-          [ -n "$ALERTS_WEBHOOK" ] || { echo "::error::ALERTS_WEBHOOK is not set on this repository, so this outcome reached nobody"; exit 1; }
+          [ -n "$ALERTS_WEBHOOK" ] || { echo "::error::ALERTS_WEBHOOK is not set in the environment this run selected, so this outcome reached nobody"; exit 1; }
           curl --fail-with-body -sS --form-string "content=$MESSAGE <$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID>" "$ALERTS_WEBHOOK"
