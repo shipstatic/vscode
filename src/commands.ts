@@ -209,7 +209,7 @@ async function whoami(context: vscode.ExtensionContext) {
     const account = await ship.whoami();
     const customDomains = account.usage.customDomains;
     vscode.window.showInformationMessage(
-      `ShipStatic: ${account.email} (${account.plan}) · ${customDomains} custom domain${customDomains === 1 ? '' : 's'}`,
+      `ShipStatic: ${account.email} (${account.plan}) • ${customDomains} custom domain${customDomains === 1 ? '' : 's'}`,
     );
   } catch (error) {
     await report(context, error, 'Failed to get account info');

@@ -551,7 +551,7 @@ describe('commands', () => {
 
       expect(MockShip).toHaveBeenCalledWith({ token: TEST_API_KEY });
       expect(window.showInformationMessage).toHaveBeenCalledWith(
-        'ShipStatic: test@example.com (standard) · 1 custom domain',
+        'ShipStatic: test@example.com (standard) • 1 custom domain',
       );
     });
 
@@ -570,7 +570,7 @@ describe('commands', () => {
       await handlers.get('shipstatic.whoami')!();
 
       expect(window.showInformationMessage).toHaveBeenCalledWith(
-        'ShipStatic: test@example.com (free) · 3 custom domains',
+        'ShipStatic: test@example.com (free) • 3 custom domains',
       );
     });
 
@@ -580,7 +580,7 @@ describe('commands', () => {
       await handlers.get('shipstatic.whoami')!();
 
       expect(window.showInformationMessage).toHaveBeenCalledWith(
-        'ShipStatic: test@example.com (free) · 0 custom domains',
+        'ShipStatic: test@example.com (free) • 0 custom domains',
       );
     });
 
