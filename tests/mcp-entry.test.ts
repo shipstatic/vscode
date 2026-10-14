@@ -3,7 +3,7 @@ import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
-import { ACCOUNT_TOOL_NAMES, SERVER_NAME, UPLOAD_TOOL_NAME } from '@shipstatic/mcp';
+import { ACCOUNT_TOOL_NAMES, SERVER_INFO, UPLOAD_TOOL_NAME } from '@shipstatic/mcp';
 import mcpManifest from '@shipstatic/mcp/package.json';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import manifest from '../package.json';
@@ -194,10 +194,13 @@ describe('the bundled MCP server', () => {
   });
 
   it('identifies as the pinned package, by construction', () => {
-    expect(initialize.serverInfo.name).toBe(SERVER_NAME);
-    // Not "some version": the one the build inlined from the pin's own
-    // manifest. A substitution that silently failed to apply lands here.
-    expect(initialize.serverInfo.version).toBe(mcpManifest.version);
+    // The whole identity a client shows at connect (name, title,
+    // description, website, icons) is the pinned package's `SERVER_INFO`:
+    // the question here is whether the bundle IS that package, so the
+    // package is the expected side, and its own suite pins the values.
+    // The version is not "some version": the one the build inlined from the
+    // pin's own manifest. A substitution that silently failed lands here.
+    expect(initialize.serverInfo).toEqual({ ...SERVER_INFO, version: mcpManifest.version });
   });
 
   it('carries the one-credential instructions an agent reads before acting', () => {
