@@ -12,8 +12,8 @@ import { PUBLIC_EXPIRY } from '../src/commands';
  * `README.md` is what renders on the VS Code Marketplace and Open VSX. For
  * someone deciding whether to install, it IS the product description — and
  * nothing else checks it. The platform has paid for this exact gap twice: the
- * 2026-07 `remove` → `delete` rename swept every source file and test while the
- * published `SKILL.md` kept teaching three commands that no longer existed, and
+ * 2026-07 `remove` → `delete` rename swept every source file and test while a
+ * published doc kept teaching three commands that no longer existed, and
  * the MCP's own README needed a fence for the same reason. Every fence of those
  * waves fenced code.
  *
