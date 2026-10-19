@@ -70,10 +70,10 @@ Version 1.0 speaks the ShipStatic 2.x platform, and the credential vocabulary ch
 |---------|----------|
 | **[MCP](https://mcp.shipstatic.com)** | Drop `https://mcp.shipstatic.com` into any MCP client |
 | **[CLI and SDK](https://github.com/shipstatic/ship)** | `npx @shipstatic/ship ./dist` |
-| **[Gemini CLI](https://github.com/shipstatic/plugin)** | `gemini extensions install https://github.com/shipstatic/plugin` |
+| **[Plugin](https://github.com/shipstatic/plugin)** | Install it in Cursor, Claude Code, Codex or Gemini CLI |
 | **[n8n](https://www.npmjs.com/package/n8n-nodes-shipstatic)** | Search "ShipStatic" in n8n's node panel |
 | **[GitHub Action](https://github.com/shipstatic/action)** | `shipstatic/action@v3` |
-| **[Agent Skill](https://www.shipstatic.com/SKILL.md)** | One file, for any skills-aware tool |
+| **[Agent Skill](https://www.shipstatic.com/SKILL.md)** | `npx skills add shipstatic/plugin` |
 
 ## License
 
