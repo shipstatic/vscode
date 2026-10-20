@@ -1,62 +1,52 @@
 # ShipStatic for VS Code
 
-Deploy static websites, landing pages, and prototypes instantly — ask your AI assistant or use the command palette. Free, no account needed.
+Deploy static websites, landing pages, and prototypes instantly from chat or the command palette. Free, no account needed.
 
-[ShipStatic](https://shipstatic.com) is static hosting without the complexity. No build steps, no framework lock-in — upload your files and get a live URL.
+## Try it in seconds, no account needed
 
-## Chat with your AI
+1. Install the extension: search **ShipStatic** in the Extensions view, or open Quick Open (`Cmd+P` / `Ctrl+P`) and run `ext install shipstatic.shipstatic`.
+2. Ask your AI in agent mode: *"Publish this with ShipStatic."* Or run **ShipStatic: Deploy** from the command palette, or click the deploy button in the status bar, and pick the folder.
 
-This extension adds 15 ShipStatic tools via MCP. Just ask:
+You get back a link you can share right away, and a claim link. The site stays up for 3 days, and opening the claim link keeps it for good.
 
-- **"Deploy my project"** — uploads your build output and returns a live URL
-- **"List my deployments"** — shows everything you've deployed
-- **"Set up www.example.com"** — connects a custom domain to your site
-- **"Check my DNS records"** — verifies your domain configuration
+Want it private? Run **ShipStatic: Deploy with Password**, or ask for *"ShipStatic's built-in password protection"*. Visitors have to type the password (6–128 characters) before they see anything, on the site's link and on any custom domain pointing at it. Plain **Deploy** never asks, so the usual path stays a single pick.
 
-All tools are available in agent mode automatically — no manual MCP configuration needed. Powered by the [@shipstatic/mcp](https://www.npmjs.com/package/@shipstatic/mcp) server, bundled with the extension.
+**Deploy** offers the folder you published last, then any build output it finds (`dist`, `build`, `out`, `public`, `_site`), so publishing again is a single keypress.
 
-## Commands
+## Keep your sites with a free account
+
+Everything above works with no account. A free account keeps your sites for good, lets you use your own domain, and shows you everything you've published in one place.
+
+1. Get your free API key at [my.shipstatic.com/api-key](https://my.shipstatic.com/api-key).
+2. Run **ShipStatic: Set Token** from the command palette and paste it. One credential, two names: the console calls it an *API key*, and every setting that carries it is called the *token*.
+
+One slot takes either credential the platform issues: a `ship-` API key or a `deploy-` deploy token. The extension never inspects which one you pasted; the server decides.
+
+Your credential is stored in VS Code's SecretStorage (your OS keychain), never in `settings.json`. It reaches the bundled MCP server as `SHIP_TOKEN` on that server's process, and nowhere else. Every other variable there is cleared, so a credential exported in your shell for the CLI can never turn an agent's no-account publish into an account one.
+
+### What you can ask
+
+The extension adds 15 ShipStatic tools to agent mode, with no MCP setup. They come from the [@shipstatic/mcp](https://www.npmjs.com/package/@shipstatic/mcp) server, bundled with the extension. Publishing works with no account; the rest answer once your token is set:
+
+- **"Publish this with ShipStatic"**: publishes your build output and gives you the link
+- **"List my ShipStatic sites"**: shows everything you've published
+- **"Set up www.example.com"**: connects your own domain to your site
+- **"Check my DNS records"**: checks your domain's setup
+
+### Commands
 
 | Command | Description |
 |---------|-------------|
-| **ShipStatic: Deploy** | Pick a folder, get a live URL |
-| **ShipStatic: Deploy with Password** | Same, behind a password |
+| **ShipStatic: Deploy** | Pick a folder, get a live link |
+| **ShipStatic: Deploy with Password** | The same, behind a password |
 | **ShipStatic: Set Token** | Store your credential securely in your OS keychain |
 | **ShipStatic: Account Info** | Check your email, plan, and usage |
-
-A **deploy button** in the status bar provides one-click deployments.
-
-## Getting started
-
-1. Install the extension
-2. Open the chat and ask to deploy your project
-
-That's it. Your site is live instantly.
-
-From the palette or the status bar, **Deploy** offers the folder you deployed last, then any build output it finds (`dist`, `build`, `out`, `public`, `_site`) — so repeat deploys are a single keypress.
-
-### Password protection
-
-Want a private site? Run **ShipStatic: Deploy with Password** instead — same flow, plus one prompt (6–128 characters). Visitors must unlock before viewing, on the deployment URL and on any custom domains pointing at it. In agent mode, just ask: *"deploy with password hunter2"*.
-
-Plain **Deploy** never asks, so the common path stays a single pick.
-
-### Token (optional)
-
-Without a token, deployments are public and expire in 3 days — the notification includes a claim link, so you can attach a site to an account after the fact. For permanent deployments:
-
-1. Get a free API key at [my.shipstatic.com/api-key](https://my.shipstatic.com/api-key)
-2. Run **ShipStatic: Set Token** from the command palette and paste it — your API key is the value it wants. One credential, two names: the console mints it as an *API key*, and every setting that carries it is called the *token*.
-
-One slot takes either credential the platform issues: a `ship-` API key or a `deploy-` deploy token. The extension never inspects which one you pasted — the server decides.
-
-Your credential is stored in VS Code's SecretStorage (your OS keychain), never in `settings.json`. It reaches the bundled MCP server as `SHIP_TOKEN` on that server's process, and nowhere else — every other variable on it is explicitly cleared, so a credential exported in your shell for CLI use can never authenticate an agent's "anonymous" deploy.
 
 ## Upgrading from 0.2.x
 
 Version 1.0 speaks the ShipStatic 2.x platform, and the credential vocabulary changed with it:
 
-- *ShipStatic: Set API Key* is now **ShipStatic: Set Token** — rebind the command if you had a keybinding for it.
+- *ShipStatic: Set API Key* is now **ShipStatic: Set Token**. Rebind the command if you had a keybinding for it.
 - A key you already stored is migrated automatically the first time 1.0 activates. You do not need to enter it again.
 - The bundled MCP server's delete tools were renamed `deployments_delete` and `domains_delete` (from `*_remove`). A saved agent workflow naming the old tool needs updating.
 
