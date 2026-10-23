@@ -433,7 +433,7 @@ describe('commands', () => {
 
       await handlers.get('shipstatic.deployWithPassword')!();
 
-      expect(window.showInputBox.mock.calls[0][0].prompt).toContain('6–128');
+      expect(window.showInputBox.mock.calls[0][0].prompt).toContain('6 to 128');
     });
 
     it('deploys nothing when the password prompt is cancelled', async () => {

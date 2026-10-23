@@ -43,7 +43,7 @@ export async function getToken(context: vscode.ExtensionContext): Promise<string
 export async function setToken(context: vscode.ExtensionContext): Promise<string | undefined> {
   const token = await vscode.window.showInputBox({
     title: 'ShipStatic token',
-    prompt: 'Paste an API key or a deploy token — one slot takes either',
+    prompt: 'Paste an API key or a deploy token. One slot takes either.',
     placeHolder: `${API_KEY.PREFIX}… or ${DEPLOY_TOKEN.PREFIX}…`,
     password: true,
     ignoreFocusOut: true,

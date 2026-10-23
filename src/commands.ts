@@ -151,7 +151,7 @@ async function deploy(context: vscode.ExtensionContext, withPassword: boolean) {
   if (withPassword) {
     password = await vscode.window.showInputBox({
       title: 'Password protection',
-      prompt: `Visitors must enter this to view the site. ${PASSWORD_CONSTRAINTS.MIN_LENGTH}–${PASSWORD_CONSTRAINTS.MAX_LENGTH} characters.`,
+      prompt: `Visitors must enter this to view the site. ${PASSWORD_CONSTRAINTS.MIN_LENGTH} to ${PASSWORD_CONSTRAINTS.MAX_LENGTH} characters.`,
       password: true,
       ignoreFocusOut: true,
     });
