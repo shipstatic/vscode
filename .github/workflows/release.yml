@@ -1,6 +1,6 @@
 # The platform's publish law, TRANSLATED — not copied.
 #
-# The npm law (root CLAUDE.md, "The npm publish law") says: the version picks
+# The platform's npm publish law says: the version picks
 # the channel, the branch grants the right to use it, publishes are idempotent,
 # and a skip says so out loud. Every one of those intents applies here; not one
 # of the mechanisms does. This registry has no dist-tags, no semver
@@ -381,7 +381,8 @@ jobs:
   # when it publishes nothing (the version is already there, or its PAT is
   # not readable), so "published" would sometimes be false. The webhook lives
   # in this job alone, which runs nothing but curl, and an unset secret fails
-  # the job rather than skipping it. Root CLAUDE.md, "CI notifications".
+  # the job rather than skipping it.
+  # The platform's release rules hold this for every repo.
   notify:
     needs: [test, version, build, release, marketplace, openvsx]
     if: failure() && github.event_name != 'pull_request'
