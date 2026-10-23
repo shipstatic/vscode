@@ -44,7 +44,7 @@ The extension adds 15 ShipStatic tools to agent mode, with no MCP setup. They co
 
 ## Upgrading from 0.2.x
 
-Version 1.0 speaks the ShipStatic 2.x platform, and the credential vocabulary changed with it:
+Version 1.0 renamed one command and two tools, and moved your stored key over for you:
 
 - *ShipStatic: Set API Key* is now **ShipStatic: Set Token**. Rebind the command if you had a keybinding for it.
 - A key you already stored is migrated automatically the first time 1.0 activates. You do not need to enter it again.
