@@ -15,7 +15,7 @@ Want it private? Run **ShipStatic: Deploy with Password**, or ask for *"ShipStat
 
 ## Keep your sites with a free account
 
-Everything above works with no account. A free account keeps your sites for good, lets you use your own domain, and shows you everything you've published in one place.
+Everything above works with no account. A free account keeps your sites for good, gives you a ShipStatic domain like `yourname.shipstatic.com`, and shows you everything you've published in one place. A custom domain like `www.example.com` needs a paid plan.
 
 1. Get your free API key at [my.shipstatic.com/api-key](https://my.shipstatic.com/api-key).
 2. Run **ShipStatic: Set Token** from the command palette and paste it. One credential, two names: the console calls it an *API key*, and every setting that carries it is called the *token*.
