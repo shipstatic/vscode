@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.10 (2026-11-03)
+
+- Bundles `@shipstatic/mcp` 2.8.2 on `@shipstatic/ship` 3.10.2 and
+  `@shipstatic/types` 3.16.0: a custom domain must be a simple subdomain, a
+  name under a wildcard DNS record is refused, and a domain whose DNS is not
+  right reads as invalid. No change to the extension's own commands.
+
 ## 1.0.4 (2026-09-20)
 
 - Bundles `@shipstatic/mcp` 2.0.0: a domain's `status` is now the one word
