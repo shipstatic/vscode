@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.11 (2026-11-09)
+
+- Bundles `@shipstatic/mcp` 2.8.3 on `@shipstatic/ship` 3.10.3 and
+  `@shipstatic/types` 3.17.0: a file path in a deployment can be at most 996
+  bytes, and a longer one is refused before anything is sent, in the same
+  words the platform uses. No change to the extension's own commands.
+
 ## 1.0.10 (2026-11-03)
 
 - Bundles `@shipstatic/mcp` 2.8.2 on `@shipstatic/ship` 3.10.2 and
