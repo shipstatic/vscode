@@ -62,6 +62,7 @@ Version 1.0 renamed one command and two tools, and moved your stored key over fo
 | **[CLI and SDK](https://github.com/shipstatic/ship)** | `npx @shipstatic/ship ./dist` |
 | **[Plugin](https://github.com/shipstatic/plugin)** | Install it in Cursor, Claude Code, Codex or Gemini CLI |
 | **[OpenCode](https://github.com/shipstatic/opencode)** | `opencode plugin add opencode-shipstatic` |
+| **[Antigravity](https://github.com/shipstatic/antigravity)** | `agy plugin install https://github.com/shipstatic/antigravity` |
 | **[n8n](https://www.npmjs.com/package/n8n-nodes-shipstatic)** | Search "ShipStatic" in n8n's node panel |
 | **[GitHub Action](https://github.com/shipstatic/action)** | `shipstatic/action@v3` |
 | **[Agent Skill](https://www.shipstatic.com/SKILL.md)** | `npx skills add shipstatic/plugin` |
