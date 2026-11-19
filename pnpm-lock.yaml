@@ -15,11 +15,11 @@ importers:
         specifier: ^1.32.1
         version: 1.32.1(zod@4.4.3)
       '@shipstatic/mcp':
-        specifier: 2.9.1-beta.1
-        version: 2.9.1-beta.1
+        specifier: 2.9.1-beta.2
+        version: 2.9.1-beta.2
       '@shipstatic/ship':
-        specifier: 3.12.0-beta.1
-        version: 3.12.0-beta.1
+        specifier: 3.12.0-beta.3
+        version: 3.12.0-beta.3
       '@shipstatic/types':
         specifier: 3.19.0-beta.1
         version: 3.19.0-beta.1
@@ -814,13 +814,13 @@ packages:
     resolution: {integrity: sha512-Nqc90v4lWCXyakD6xNyNACBJNJ0tNCwj2WNk/7ivyacYHxiITVgmLUFXTBOeCdy79iz6HtN9Y31uw/jbLrdOAg==}
     engines: {node: '>=20.0.0'}
 
-  '@shipstatic/mcp@2.9.1-beta.1':
-    resolution: {integrity: sha512-OMLM0dawMLEFRk+jRINK15ELRRYJORp8y/TK2OXtHEFu7X1Uc1orIkuC9+DNT46puuXnJSfbDSi43rCzv3Dy3g==}
+  '@shipstatic/mcp@2.9.1-beta.2':
+    resolution: {integrity: sha512-todBzcvaA1sdinZjEWV3VCQKHKLRL3aHGL01EsgvokhSbkMWJJfLMpFzUBSraf6UHbRlcBSAFeVILoEtaje7dw==}
     engines: {node: '>=20.19.0'}
     hasBin: true
 
-  '@shipstatic/ship@3.12.0-beta.1':
-    resolution: {integrity: sha512-n5qrUSpIfWUAAfdvKK9WvUp8PnlJDnJ2LpEClp369XtHWnrf8Or5gBKVtM6m1GevbTU44VDX0HgApKAi8Krc/g==}
+  '@shipstatic/ship@3.12.0-beta.3':
+    resolution: {integrity: sha512-aeE4xD6ziDghEixAOp35UsbxRWt1/3nopIcsaMhm65fEr5C4WrbDgDKGvuZ9ybx9BhVxBXTGIcPs2RTd2tegjg==}
     engines: {node: '>=20.19.0'}
     hasBin: true
 
@@ -3086,17 +3086,17 @@ snapshots:
 
   '@secretlint/types@10.2.2': {}
 
-  '@shipstatic/mcp@2.9.1-beta.1':
+  '@shipstatic/mcp@2.9.1-beta.2':
     dependencies:
       '@modelcontextprotocol/sdk': 1.32.1(zod@4.4.3)
-      '@shipstatic/ship': 3.12.0-beta.1
+      '@shipstatic/ship': 3.12.0-beta.3
       '@shipstatic/types': 3.19.0-beta.1
       zod: 4.4.3
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - supports-color
 
-  '@shipstatic/ship@3.12.0-beta.1':
+  '@shipstatic/ship@3.12.0-beta.3':
     dependencies:
       junk: 4.0.1
       spark-md5: 3.0.2
