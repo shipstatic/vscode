@@ -98,8 +98,8 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.5",
     "@modelcontextprotocol/sdk": "^1.32.1",
-    "@shipstatic/mcp": "2.9.1-beta.4",
-    "@shipstatic/ship": "3.12.0-beta.5",
+    "@shipstatic/mcp": "2.9.1-beta.5",
+    "@shipstatic/ship": "3.12.0-beta.6",
     "@shipstatic/types": "3.19.0-beta.1",
     "@types/node": "^20.19.43",
     "@types/vscode": "1.101.0",
