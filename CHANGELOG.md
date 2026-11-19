@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.12 (2026-11-19)
+
+- Bundles `@shipstatic/mcp` 2.9.0 on `@shipstatic/ship` 3.11.0 and
+  `@shipstatic/types` 3.18.0. A deploy no longer holds your files in memory.
+  A link inside the folder is never followed: one that would be published is
+  refused by name. Junk files next to your site no longer stop a deploy. A
+  file with a name that's too long, or one that can't be read, is named in
+  the error instead of being left out. No change to the extension's own
+  commands.
+
 ## 1.0.11 (2026-11-09)
 
 - Bundles `@shipstatic/mcp` 2.8.3 on `@shipstatic/ship` 3.10.3 and
