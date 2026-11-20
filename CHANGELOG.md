@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.13 (2026-11-20)
+
+- Bundles `@shipstatic/mcp` 2.9.1 on `@shipstatic/ship` 3.12.0 and
+  `@shipstatic/types` 3.19.0. If a file is replaced while a deploy is reading
+  it, the deploy stops and names the file. A deploy that fails is no longer
+  sent a second time on its own, so a lost reply can't leave you with two
+  sites. A request whose answer stalls part-way now times out. No change to
+  the extension's own commands.
+
 ## 1.0.12 (2026-11-19)
 
 - Bundles `@shipstatic/mcp` 2.9.0 on `@shipstatic/ship` 3.11.0 and
