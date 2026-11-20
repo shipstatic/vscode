@@ -15,11 +15,11 @@ importers:
         specifier: ^1.32.1
         version: 1.32.1(zod@4.4.3)
       '@shipstatic/mcp':
-        specifier: 2.9.1-beta.10
-        version: 2.9.1-beta.10
+        specifier: 2.9.1-beta.11
+        version: 2.9.1-beta.11
       '@shipstatic/ship':
-        specifier: 3.12.0-beta.11
-        version: 3.12.0-beta.11
+        specifier: 3.12.0-beta.12
+        version: 3.12.0-beta.12
       '@shipstatic/types':
         specifier: 3.19.0-beta.1
         version: 3.19.0-beta.1
@@ -814,13 +814,13 @@ packages:
     resolution: {integrity: sha512-Nqc90v4lWCXyakD6xNyNACBJNJ0tNCwj2WNk/7ivyacYHxiITVgmLUFXTBOeCdy79iz6HtN9Y31uw/jbLrdOAg==}
     engines: {node: '>=20.0.0'}
 
-  '@shipstatic/mcp@2.9.1-beta.10':
-    resolution: {integrity: sha512-k3Z4QMCy3HRzSpXslN1yUhJErXoopkBOy2aQkqNOLsHfp2lxkytqSODdQXKXcV1f0JOb49wPpqK7i4RMJIEaDw==}
+  '@shipstatic/mcp@2.9.1-beta.11':
+    resolution: {integrity: sha512-WJ5+rqfAUpG74e81H/C4ox4l1ppp/DZNpDcWZbyemDD7747srQA4cb1zKXa0oBjOVFtd5mIeroa/JbGXV+BRrg==}
     engines: {node: '>=20.19.0'}
     hasBin: true
 
-  '@shipstatic/ship@3.12.0-beta.11':
-    resolution: {integrity: sha512-/b6a4WfFQTjp9IVFEPlY8WqNizEjPyhigSkINYpHuXoQ3ov0ds3DP/lgHG/oQSGy97+xkiUQf+hInOj5OBzY9g==}
+  '@shipstatic/ship@3.12.0-beta.12':
+    resolution: {integrity: sha512-ALPVQeAb7+TmAzBeVleTFkScOlQw3vNgzEXhu0dBN69ggXJjViIKGzGFFSJqVDaL0RS/htdecopO5ETDHyGxBA==}
     engines: {node: '>=20.19.0'}
     hasBin: true
 
@@ -3086,17 +3086,17 @@ snapshots:
 
   '@secretlint/types@10.2.2': {}
 
-  '@shipstatic/mcp@2.9.1-beta.10':
+  '@shipstatic/mcp@2.9.1-beta.11':
     dependencies:
       '@modelcontextprotocol/sdk': 1.32.1(zod@4.4.3)
-      '@shipstatic/ship': 3.12.0-beta.11
+      '@shipstatic/ship': 3.12.0-beta.12
       '@shipstatic/types': 3.19.0-beta.1
       zod: 4.4.3
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - supports-color
 
-  '@shipstatic/ship@3.12.0-beta.11':
+  '@shipstatic/ship@3.12.0-beta.12':
     dependencies:
       junk: 4.0.1
       spark-md5: 3.0.2
