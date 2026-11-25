@@ -45,7 +45,14 @@ async function main() {
   // extension's `.vsix`, so its deploys are the extension's; the palette's
   // already said `vsc`, and until `@shipstatic/mcp@1.0.0-beta.8` the agent's
   // could only say `mcp`, indistinguishable from an npx install elsewhere.
-  const server = createServer(ship, { version: MCP_VERSION, via: DeploymentVia.VSC });
+  // `platform` decides what an absolute path is for the upload's `path`: only
+  // this process can ask the machine, and the server reads every system but
+  // Windows alike when it is told nothing.
+  const server = createServer(ship, {
+    version: MCP_VERSION,
+    via: DeploymentVia.VSC,
+    platform: process.platform,
+  });
   await server.connect(new StdioServerTransport());
 
   // stdout is the JSON-RPC channel, so the banner goes to stderr — where VS

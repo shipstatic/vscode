@@ -217,6 +217,23 @@ describe('the bundled MCP server', () => {
     expect(names).not.toContain('deployments_remove');
     expect(names).not.toContain('domains_remove');
   });
+
+  it('refuses a path that is not absolute, and shows one of this system', async () => {
+    // The entry point names the system it runs on, so the example is this
+    // machine's own. A bundle that named none would show Windows a POSIX path
+    // and refuse every `C:\\` one.
+    const { result } = await client.send('tools/call', {
+      name: 'deployments_upload',
+      arguments: { path: 'dist' },
+    });
+    const example =
+      process.platform === 'win32'
+        ? 'C:\\\\Users\\\\me\\\\project\\\\dist'
+        : '/Users/me/project/dist';
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain(`Pass an absolute path, like "${example}".`);
+  });
 });
 
 describe('the manifest', () => {
