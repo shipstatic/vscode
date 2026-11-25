@@ -53,7 +53,7 @@ in another client.
 **It passes `platform: process.platform`.** The system decides what an
 absolute path is for the upload's `path`, and only this process can ask the
 machine. A server told nothing reads every system but Windows alike, so it
-would refuse every `C:\\` path. `tests/mcp-entry.test.ts` holds the refusal's
+would refuse every `C:\` path. `tests/mcp-entry.test.ts` holds the refusal's
 example to this machine's system.
 
 **A `startStdio` export absorbing the transport is refused.** The MCP SDK's

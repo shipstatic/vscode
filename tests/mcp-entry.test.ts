@@ -221,7 +221,7 @@ describe('the bundled MCP server', () => {
   it('refuses a path that is not absolute, and shows one of this system', async () => {
     // The entry point names the system it runs on, so the example is this
     // machine's own. A bundle that named none would show Windows a POSIX path
-    // and refuse every `C:\\` one.
+    // and refuse every `C:\` one.
     const { result } = await client.send('tools/call', {
       name: 'deployments_upload',
       arguments: { path: 'dist' },
